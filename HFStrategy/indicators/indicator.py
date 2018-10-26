@@ -17,9 +17,15 @@ class Indicator:
     return len(self.values)
 
   def v(self):
+    if len(self.values) == 0:
+      return 0
+
     return self.values[-1]
 
   def prev(self, n = 1):
+    if len(self.values) < n:
+      return 0
+
     return self.values[-1 - n]
 
   def add(self, v):
@@ -45,5 +51,5 @@ class Indicator:
     )
 
   def ready(self):
-    return isfinite(self.v())
+    return len(self.values) > 0
   
