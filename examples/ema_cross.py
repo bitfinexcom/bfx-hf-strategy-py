@@ -1,6 +1,8 @@
 import json
 import sys
+import logging
 sys.path.append('../')
+logging.basicConfig(level=logging.DEBUG)
 
 from hfstrategy import Strategy, execOffline
 from bfxhfindicators import EMA
