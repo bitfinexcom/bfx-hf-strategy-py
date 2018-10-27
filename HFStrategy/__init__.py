@@ -27,4 +27,10 @@ from HFStrategy.indicators.ema_vol import EMAVolume
 from HFStrategy.indicators.envelope import Envelope
 from HFStrategy.indicators.know_sure_thing import KST
 from HFStrategy.indicators.macd import MACD
+from HFStrategy.indicators.mass_index import MassIndex
+from HFStrategy.indicators.momentum import Momentum
+from HFStrategy.indicators.net_volume import NetVolume
+from HFStrategy.indicators.on_balance_volume import OBV
+from HFStrategy.indicators.price_channel import PC
+from HFStrategy.indicators.price_oscillator import PPO
 from HFStrategy.backtest import execOffline
