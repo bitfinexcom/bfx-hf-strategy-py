@@ -53,6 +53,7 @@ class CMF(Indicator):
       return
     
     super().update(sum(self._bufferMFV) / sum(self._bufferVol))
+    return self.v()
 
   def add(self, candle):
     vol = candle['vol']
@@ -71,3 +72,4 @@ class CMF(Indicator):
       return
     
     super().add(sum(self._bufferMFV) / sum(self._bufferVol))
+    return self.v()

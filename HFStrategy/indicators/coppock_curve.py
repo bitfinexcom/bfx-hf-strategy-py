@@ -36,6 +36,7 @@ class CoppockCurve(Indicator):
     
     self._wma.update(short + long)
     super().update(self._wma.v())
+    return self.v()
 
   def add(self, v):
     self._shortROC.add(v)
@@ -49,3 +50,4 @@ class CoppockCurve(Indicator):
     
     self._wma.add(short + long)
     super().add(self._wma.v())
+    return self.v()

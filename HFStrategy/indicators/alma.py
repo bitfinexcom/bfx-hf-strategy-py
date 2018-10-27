@@ -44,6 +44,7 @@ class ALMA(Indicator):
       return
     
     super().update(ALMA.calc(self._buffer, self._p, self._offset, self._s))
+    return self.v()
 
   def add(self, v):
     self._buffer.append(v)
@@ -54,3 +55,4 @@ class ALMA(Indicator):
       return
     
     super().add(ALMA.calc(self._buffer, self._p, self._offset, self._s))
+    return self.v()

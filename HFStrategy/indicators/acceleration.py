@@ -39,6 +39,7 @@ class Acceleration(Indicator):
       return
     
     super().update(roc - self._buffer[0])
+    return self.v()
 
   def add(self, v):
     self._roc.add(v)
@@ -54,3 +55,5 @@ class Acceleration(Indicator):
 
     if len(self._buffer) > self._p:
       del self._buffer[0]
+
+    return self.v()

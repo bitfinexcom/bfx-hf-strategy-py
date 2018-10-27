@@ -58,6 +58,7 @@ class AccumulativeSwingIndex(Indicator):
     
     si = AccumulativeSwingIndex.calcSI(candle, self._prevCandle, self._lmv)
     super().update(self.prev() + si)
+    return self.v()
 
   def add(self, candle):
     if self._prevCandle == None:
@@ -69,3 +70,4 @@ class AccumulativeSwingIndex(Indicator):
     super().add(self.v() + si)
 
     self._prevCandle = candle
+    return self.v()

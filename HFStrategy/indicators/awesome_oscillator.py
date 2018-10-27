@@ -28,6 +28,7 @@ class AO(Indicator):
     self._smaLong.update(v)
 
     super().update(self._smaShort.v() - self._smaLong.v())
+    return self.v()
 
   def add(self, candle):
     v = (candle['high'] + candle['low']) / 2
@@ -36,4 +37,5 @@ class AO(Indicator):
     self._smaLong.add(v)
 
     super().add(self._smaShort.v() - self._smaLong.v())
+    return self.v()
    

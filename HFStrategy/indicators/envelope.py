@@ -34,6 +34,8 @@ class Envelope(Indicator):
       'lower': basis - delta
     })
 
+    return self.v()
+
   def add(self, v):
     self._sma.add(v)
     basis = self._sma.v()
@@ -47,3 +49,5 @@ class Envelope(Indicator):
       'basis': basis,
       'lower': basis - delta
     })
+
+    return self.v()

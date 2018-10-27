@@ -45,6 +45,8 @@ class MACD(Indicator):
       'histogram': histogram
     })
 
+    return self.v()
+
   def add(self, v):
     slowEMA = self._slowEMA.add(v)
     fastEMA = self._fastEMA.add(v)
@@ -65,3 +67,5 @@ class MACD(Indicator):
       'signal': signalEMA,
       'histogram': histogram
     })
+
+    return self.v()

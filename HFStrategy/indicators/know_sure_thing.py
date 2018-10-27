@@ -78,6 +78,8 @@ class KST(Indicator):
       'signal': self._smaSignal.v()
     })
 
+    return self.v()
+
   def add(self, v):
     self._rocA.add(v)
     self._rocB.add(v)
@@ -106,3 +108,5 @@ class KST(Indicator):
       'v': kst,
       'signal': self._smaSignal.v()
     })
+
+    return self.v()

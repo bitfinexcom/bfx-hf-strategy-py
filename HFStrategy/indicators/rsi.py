@@ -58,6 +58,8 @@ class RSI(Indicator):
     if rs is not None:
       super().update(100 - (100 / (1 + rs)))
 
+    return self.v()
+
   def add(self, v):
     if self._prevInputValue == None:
       self._prevInputValue = v
@@ -70,3 +72,5 @@ class RSI(Indicator):
     if rs is not None:
       super().add(100 - (100 / (1 + rs)))
       self._prevInputValue = v
+
+    return self.v()

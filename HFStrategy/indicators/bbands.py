@@ -30,11 +30,13 @@ class BollingerBands(Indicator):
     middle = self._sma.v()
     stddev = self._stddev.v()
 
-    return super().update({
+    super().update({
       'top': middle + (self._m * stddev),
       'middle': middle,
       'bottom': middle - (self._m * stddev)
     })
+
+    return self.v()
 
   def add(self, v):
     self._sma.add(v)
@@ -43,8 +45,10 @@ class BollingerBands(Indicator):
     middle = self._sma.v()
     stddev = self._stddev.v()
 
-    return super().add({
+    super().add({
       'top': middle + (self._m * stddev),
       'middle': middle,
       'bottom': middle - (self._m * stddev)
     })
+
+    return self.v()

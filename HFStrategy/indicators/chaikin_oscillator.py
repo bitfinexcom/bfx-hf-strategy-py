@@ -42,6 +42,8 @@ class ChaikinOsc(Indicator):
     if (isfinite(short) and isfinite(long)):
       super().update(short - long)
 
+    return self.v()
+
   def add(self, candle):
     self._adl.add(candle)
     adl = self._adl.v()
@@ -57,3 +59,5 @@ class ChaikinOsc(Indicator):
 
     if (isfinite(short) and isfinite(long)):
       super().add(short - long)
+
+    return self.v()

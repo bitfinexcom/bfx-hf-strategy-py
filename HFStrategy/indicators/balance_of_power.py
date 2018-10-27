@@ -16,10 +16,12 @@ class BOP(Indicator):
       super().update(1)
     else:
       super().update((c['close'] - c['open']) / (c['high'] - c['low']))
+    return self.v()
 
   def add(self, c):
     if c['high'] == c['low']:
       super().add(1)
     else:
       super().add((c['close'] - c['open']) / (c['high'] - c['low']))
+    return self.v()
    

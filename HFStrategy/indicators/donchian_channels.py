@@ -37,6 +37,7 @@ class DC(Indicator):
       'middle': (maxHigh + mmaxHigh) / 2,
       'lower': minLow
     })
+    return self.v()
 
   def add(self, candle):
     self._buffer.append(candle)
@@ -54,3 +55,4 @@ class DC(Indicator):
       'middle': (maxHigh + minLow) / 2,
       'lower': minLow
     })
+    return self.v()

@@ -28,6 +28,7 @@ class SMA(Indicator):
       return
     
     super().update(sum(self._buffer) / self._p)
+    return self.v()
 
   def add(self, v):
     self._buffer.append(v)
@@ -36,3 +37,4 @@ class SMA(Indicator):
       del self._buffer[0]
     
     super().add(sum(self._buffer) / self._p)
+    return self.v()

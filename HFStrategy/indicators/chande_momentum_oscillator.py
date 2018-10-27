@@ -36,6 +36,7 @@ class ChandeMO(Indicator):
     sD = sum(map(lambda c: c['open'] - c['close'], dCandles))
 
     super().update(((sU - sD) / (sU + sD)) * 100)
+    return self.v()
 
   def add(self, candle):
     self._buffer.append(candle)
@@ -52,3 +53,4 @@ class ChandeMO(Indicator):
     sD = sum(map(lambda c: c['open'] - c['close'], dCandles))
 
     super().add(((sU - sD) / (sU + sD)) * 100)
+    return self.v()

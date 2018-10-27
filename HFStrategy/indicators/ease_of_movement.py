@@ -51,6 +51,7 @@ class EOM(Indicator):
 
     if isfinite(v):
       super().update(v)
+    return self.v()
 
   def add(self, candle):
     if self._lastCandle == None:
@@ -66,3 +67,4 @@ class EOM(Indicator):
       super().add(v)
     
     self._lastCandle = candle
+    return self.v()

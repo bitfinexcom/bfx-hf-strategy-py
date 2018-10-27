@@ -23,6 +23,7 @@ class DPO(Indicator):
   def update(self, v):
     self._sma.update(v)
     super().update(v - self._sma.prev(self._pricePeriod - 1))
+    return self.v()
 
   def add(self, v):
     self._sma.add(v)
@@ -31,3 +32,4 @@ class DPO(Indicator):
       return
 
     super().add(v - self._sma.prev(self._pricePeriod))
+    return self.v()

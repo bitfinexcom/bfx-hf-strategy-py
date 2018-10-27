@@ -39,12 +39,16 @@ class StdDeviation(Indicator):
       return
 
     super().update(StdDeviation.bufferStdDev(self._buffer, self._p))
+    return self.v()
 
   def add(self, v):
     self._buffer.append(v)
 
     if len(self._buffer) > self._p:
       del self._buffer[0]
+    elif len(self._buffer) <= self._p:
+      return
 
-    if len(self._buffer) == self._p:
-      super().add(StdDeviation.bufferStdDev(self._buffer, self._p))
+    super().add(StdDeviation.bufferStdDev(self._buffer, self._p))
+
+    return self.v()

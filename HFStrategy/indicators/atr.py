@@ -57,6 +57,8 @@ class ATR(Indicator):
         ATR.calc(self.prev(), self._p, self._prevCandle, candle)
       )
 
+    return self.v()
+
   def add(self, candle):
     if self.l() == 0:
       if len(self._buffer) < self._p:
@@ -70,3 +72,4 @@ class ATR(Indicator):
       )
     
     self._prevCandle = candle
+    return self.v()

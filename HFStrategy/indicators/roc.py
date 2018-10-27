@@ -28,6 +28,7 @@ class ROC(Indicator):
       return
     
     super().update(((v - self._buffer[0]) / self._buffer[0]) * 100)
+    return self.v()
 
   def add(self, v):
     if len(self._buffer) == self._p:
@@ -37,3 +38,5 @@ class ROC(Indicator):
 
     if len(self._buffer) > self._p:
       del self._buffer[0]
+
+    return self.v()

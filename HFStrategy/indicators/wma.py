@@ -39,6 +39,7 @@ class WMA(Indicator):
       n += self._buffer[-i - 1] * (self._p - i)
     
     super().update(n / self._d)
+    return self.v()
 
   def add(self, v):
     self._buffer.append(v)
@@ -54,3 +55,4 @@ class WMA(Indicator):
       n += self._buffer[-i - 1] * (self._p - i)
     
     super().add(n / self._d)
+    return self.v()

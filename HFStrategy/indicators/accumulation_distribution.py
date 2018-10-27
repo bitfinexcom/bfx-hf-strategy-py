@@ -33,6 +33,8 @@ class AccumulationDistribution(Indicator):
     else:
       super().update(moneyFlowVol)
 
+    return self.v()
+
   def add(self, candle):
     moneyFlowVol = AccumulationDistribution.moneyFlowVol(candle)
     prev = self.v()
@@ -41,3 +43,5 @@ class AccumulationDistribution(Indicator):
       super().add(prev + moneyFlowVol)
     else:
       super().add(moneyFlowVol)
+
+    return self.v()
