@@ -36,4 +36,8 @@ from HFStrategy.indicators.price_oscillator import PPO
 from HFStrategy.indicators.price_volume_trend import PVT
 from HFStrategy.indicators.relative_vigor_index import RVGI
 from HFStrategy.indicators.relative_volatility_index import RVI
+from HFStrategy.indicators.williams_r import WilliamsR
+from HFStrategy.indicators.vwma import VWMA
+from HFStrategy.indicators.vwap import VWAP
+from HFStrategy.indicators.volume_oscillator import VO
 from HFStrategy.backtest import execOffline
