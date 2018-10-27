@@ -21,4 +21,8 @@ from HFStrategy.indicators.chande_momentum_oscillator import ChandeMO
 from HFStrategy.indicators.wma import WMA
 from HFStrategy.indicators.coppock_curve import CoppockCurve
 from HFStrategy.indicators.detrended_price_oscillator import DPO
+from HFStrategy.indicators.donchian_channels import DC
+from HFStrategy.indicators.ease_of_movement import EOM
+from HFStrategy.indicators.ema_vol import EMAVolume
+from HFStrategy.indicators.envelope import Envelope
 from HFStrategy.backtest import execOffline
