@@ -40,4 +40,8 @@ from HFStrategy.indicators.williams_r import WilliamsR
 from HFStrategy.indicators.vwma import VWMA
 from HFStrategy.indicators.vwap import VWAP
 from HFStrategy.indicators.volume_oscillator import VO
+from HFStrategy.indicators.true_strength_index import TSI
+from HFStrategy.indicators.trix import TRIX
+from HFStrategy.indicators.stochastic import Stochastic
+from HFStrategy.indicators.stochastic_rsi import StochasticRSI
 from HFStrategy.backtest import execOffline
