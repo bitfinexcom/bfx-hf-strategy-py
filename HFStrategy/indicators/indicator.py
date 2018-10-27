@@ -30,6 +30,7 @@ class Indicator:
 
   def add(self, v):
     self.values.append(v)
+    return v
 
   def update(self, v):
     if len(self.values) == 0:

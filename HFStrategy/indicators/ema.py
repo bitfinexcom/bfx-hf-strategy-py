@@ -19,8 +19,12 @@ class EMA(Indicator):
     else:
       super().update((self._a * v) + ((1 - self._a) * self.prev()))
 
+    return self.v()
+
   def add(self, v):
     if self.l() == 0:
       super().add(v)
     else: 
       super().add((self._a * v) + ((1 - self._a) * self.v()))
+
+    return self.v()

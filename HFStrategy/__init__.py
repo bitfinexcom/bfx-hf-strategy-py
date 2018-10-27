@@ -25,4 +25,6 @@ from HFStrategy.indicators.donchian_channels import DC
 from HFStrategy.indicators.ease_of_movement import EOM
 from HFStrategy.indicators.ema_vol import EMAVolume
 from HFStrategy.indicators.envelope import Envelope
+from HFStrategy.indicators.know_sure_thing import KST
+from HFStrategy.indicators.macd import MACD
 from HFStrategy.backtest import execOffline
