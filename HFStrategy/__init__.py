@@ -33,4 +33,7 @@ from HFStrategy.indicators.net_volume import NetVolume
 from HFStrategy.indicators.on_balance_volume import OBV
 from HFStrategy.indicators.price_channel import PC
 from HFStrategy.indicators.price_oscillator import PPO
+from HFStrategy.indicators.price_volume_trend import PVT
+from HFStrategy.indicators.relative_vigor_index import RVGI
+from HFStrategy.indicators.relative_volatility_index import RVI
 from HFStrategy.backtest import execOffline
