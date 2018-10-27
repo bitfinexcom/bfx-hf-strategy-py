@@ -18,4 +18,7 @@ from HFStrategy.indicators.bbands import BollingerBands
 from HFStrategy.indicators.chaikin_money_flow import CMF
 from HFStrategy.indicators.chaikin_oscillator import ChaikinOsc
 from HFStrategy.indicators.chande_momentum_oscillator import ChandeMO
+from HFStrategy.indicators.wma import WMA
+from HFStrategy.indicators.coppock_curve import CoppockCurve
+from HFStrategy.indicators.detrended_price_oscillator import DPO
 from HFStrategy.backtest import execOffline
