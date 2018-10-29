@@ -68,6 +68,6 @@ with open('btc_candle_data.json', 'r') as f:
     'tf': '1min',
   }, btcCandleData)
 
-  strategy = EMAStrategy()
+  strategy = EMAStrategy(symbol='USDBTC')
 
   execOffline(candles, [], strategy)
