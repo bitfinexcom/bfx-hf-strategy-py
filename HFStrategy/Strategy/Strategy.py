@@ -1,14 +1,16 @@
 from .Position import Position
+from threading import Thread
 
 def candleMarketDataKey(candle):
   return '%s-%s' % (candle['symbol'], candle['tf'])
 
 class Strategy(Position):
-  def __init__(self, backtesting = False):
+  def __init__(self, backtesting = False, symbol='USDBTC'):
     self.marketData = {}
     self.positions = {}
     self.candlePrice = 'close'
     self.backtesting = backtesting
+    self.symbol = symbol
     super(Strategy, self).__init__()
 
   def indicatorValues(self):
@@ -144,5 +146,16 @@ class Strategy(Position):
   def onUpdateShort(self, update):
     pass
 
+  def onOrderFill(self, params):
+    pass
+  
+  def onPositionUpdate(self, params):
+    pass
+
   def getPosition(self, symbol):
     return self.positions.get(symbol)
+  
+  # Starts a thread with the given parameters
+  def _startNewThread(self, func):
+    t = Thread(target=func, args=(self,))
+    t.start()
