@@ -29,7 +29,7 @@ class OrderType(Enum):
   MARKET = 1
   EXCHNAGE_MARKET = 2
 
-class Position(object):
+class PositionManager(object):
 
   ############################
   # Close Position functions #

@@ -1,10 +1,10 @@
-from .Position import Position
+from .PositionManager import PositionManager
 from threading import Thread
 
 def candleMarketDataKey(candle):
   return '%s-%s' % (candle['symbol'], candle['tf'])
 
-class Strategy(Position):
+class Strategy(PositionManager):
   def __init__(self, backtesting = False, symbol='USDBTC'):
     self.marketData = {}
     self.positions = {}
