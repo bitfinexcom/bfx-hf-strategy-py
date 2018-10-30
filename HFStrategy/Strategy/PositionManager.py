@@ -1,6 +1,7 @@
 import logging
 from enum import Enum
 from .orders import submitTrade
+from .Position import Position
 
 # Simple wrapper to log the calling of a function
 # to enable set the logger to debug mode
@@ -16,7 +17,7 @@ class PositionError(Exception):
   An Error that is thrown whenever there is a problem with opening,
   creating or updating a position.
   '''
-  def __init__(self, message, errors):
+  def __init__(self, message, errors=None):
         # Pass the message to the base class
         super().__init__(message)
         self.errors = errors
@@ -37,8 +38,7 @@ class PositionManager(object):
 
   @logfunc
   def closePosition(self, params):
-    # some state usage here
-    pass
+    self.closePositionWithOrder(params)
   
   @logfunc
   def closeOpenPositions(self, params):
@@ -54,11 +54,32 @@ class PositionManager(object):
 
   @logfunc
   def closePositionMarket(self, params):
-    pass
+    params['type'] = OrderType.MARKET if hasattr(self, 'margin') else OrderType.EXCHNAGE_MARKET
+    return self.closePosition(params)
 
   @logfunc
   def closePositionWithOrder(self, params):
-    pass
+    symbol = params.get('symbol', self.symbol)
+    prevPosition = self.getPosition(symbol)
+
+    if symbol is None:
+      raise KeyError('Expected paramater value \'symbol\' but not present.')
+    if self.getPosition == None:
+      raise PositionError('No position exists for %s' % (symbol))
+    
+    amount = prevPosition.amount * -1
+    def submit(self):
+      order, trade = submitTrade(params, backtesting=self.backtesting)
+      self.removePosition(prevPosition)
+      logging.info("Position closed:")
+      logging.info(str(prevPosition))
+      self.onOrderFill({ trade: trade, order: order })
+      self.onPositionClose({
+        'position': prevPosition,
+        'order': order,
+        'trade': trade
+      })
+    self._startNewThread(submit)
 
   ###########################
   # Open Position functions #
@@ -88,29 +109,30 @@ class PositionManager(object):
   @logfunc
   def openPositionWithOrder(self, params):
     symbol = params.get('symbol', self.symbol)
+    amount = params.get('amount')
+    stop = params.get('stop', None)
+    target = params.get('target', None)
+    tag = params.get('tag', None)
     if symbol is None:
       raise KeyError('Expected paramater value \'symbol\' but not present.')
     # check for open positions
     if self.getPosition(symbol) != None:
-      raise PositionError('A position already exists for %s' % (sym))
+      raise PositionError('A position already exists for %s' % (symbol))
     # create submit functions so its easier to pass onto
     # a new thread
     def submit(self):
-      # submit Trade
-      # TODO: update state and use real trade/order objects
-      # TODO: create position object
-      trade, order = submitTrade(None, backtesting=self.backtesting)
-      self.onOrderFill(dict({ trade: trade, order: order }))
-      self.onPositionUpdate(dict({
-        'position': None,
+      order, trade = submitTrade(params, backtesting=self.backtesting)
+      position = Position(symbol, amount, order.priceAvg,
+                          [trade], stop, target, tag)
+      self.addPosition(position)
+      logging.info("New Position opened:")
+      logging.info(str(position))
+      self.onOrderFill({ trade: trade, order: order })
+      self.onPositionUpdate({
+        'position': position,
         'order': order,
         'trade': trade
-      }))
-      # callback on onOrderFill event
-      # callback on onPositionOpen event
-      logging.info('Opened short position')
-      return
-
+      })
     self._startNewThread(submit)
 
   @logfunc
@@ -164,10 +186,6 @@ class PositionManager(object):
 
   @logfunc
   def updatePositionWithOrder(self, params):
-    pass
-  
-  @logfunc
-  def closePositionMarket(self, params):
     pass
   
   @logfunc

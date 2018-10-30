@@ -1,13 +1,15 @@
 from .PositionManager import PositionManager
+from .Position import Position
 from threading import Thread
 
 def candleMarketDataKey(candle):
   return '%s-%s' % (candle['symbol'], candle['tf'])
 
 class Strategy(PositionManager):
-  def __init__(self, backtesting = False, symbol='USDBTC'):
+  def __init__(self, backtesting = False, symbol='tBTCUSD'):
     self.marketData = {}
     self.positions = {}
+    self.closedPositions = []
     self.candlePrice = 'close'
     self.backtesting = backtesting
     self.symbol = symbol
@@ -118,18 +120,16 @@ class Strategy(PositionManager):
 
   def onPriceUpdate(self, update):
     symbol = update['symbol']
-
     # TODO: Handle stops/targets
-
     if symbol not in self.positions:
       self.onEnter(update)
     else:
       symPosition = self.positions[symbol]
-      amount = symPosition['amount']
+      amount = symPosition.amount
 
       self.onUpdate(update)
 
-      if amount > 1:
+      if amount > 0:
         self.onUpdateLong(update)
       else:
         self.onUpdateShort(update)
@@ -152,9 +152,19 @@ class Strategy(PositionManager):
   def onPositionUpdate(self, params):
     pass
 
+  def onPositionClose(self, params):
+    pass
+
   def getPosition(self, symbol):
     return self.positions.get(symbol)
+
+  def addPosition(self, position):
+    self.positions[position.symbol] = position
   
+  def removePosition(self, position):
+    self.closedPositions + [position]
+    del self.positions[position.symbol]
+
   # Starts a thread with the given parameters
   def _startNewThread(self, func):
     t = Thread(target=func, args=(self,))

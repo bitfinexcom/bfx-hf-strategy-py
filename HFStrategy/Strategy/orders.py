@@ -1,15 +1,22 @@
 import logging
 
+from .Order import Order
+from .Trade import Trade
+
 def submitOrder(orderParams):
   pass
 
 def _simulateOrderFill(orderParams):
-  pass
+  price = orderParams.get('price')
+  order = Order(orderParams.get('symbol'), price)
+  return order
 
 def submitTrade(orderParams, backtesting):
   if (backtesting):
     # simulate
-    return None, None
+    order = _simulateOrderFill(orderParams)
+    trade = Trade(order)
+    return order, trade
   else:
     ## trade for real
     return None, None
