@@ -2,7 +2,8 @@ import json
 import sys
 sys.path.append('../')
 
-from HFStrategy import Strategy, EMA, execOffline
+from hfstrategy import Strategy, execOffline
+from bfxhfindicators import EMA
 
 class EMAStrategy(Strategy):
   indicators = {
