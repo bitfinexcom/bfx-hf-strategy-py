@@ -2,9 +2,10 @@ import json
 import sys
 import logging
 sys.path.append('../')
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 from hfstrategy import Strategy, execOffline
+from HFStrategy import PositionError
 from bfxhfindicators import EMA
 
 class EMAStrategy(Strategy):
@@ -18,42 +19,52 @@ class EMAStrategy(Strategy):
     emaS = self.indicators['emaS']
     s = iv['emaS']
     l = iv['emaL']
-
     if emaS.crossed(l):
       if s > l:
-        return self.openLongPositionMarket({
-          'mtsCreate': update['mts'],
-          'price': update['price'],
-          'amount': 1,
-        })
+        try:
+          return self.openLongPositionMarket({
+            'mtsCreate': update['mts'],
+            'price': update['price'],
+            'amount': 1,
+          })
+        except PositionError as e:
+          logging.error(e)
       else:
-        return self.openShortPositionMarket({
-          'mtsCreate': update['mts'],
-          'price': update['price'],
-          'amount': 1,
-        })
+        try:
+          return self.openShortPositionMarket({
+            'mtsCreate': update['mts'],
+            'price': update['price'],
+            'amount': 1,
+          })
+        except PositionError as e:
+          logging.error(e)
 
   def onUpdateShort(self, update):
     iv = self.indicatorValues()
     s = iv['emaS']
     l = iv['emaL']
-
     if s < l:
-      return self.closePositionMarket({
-        'mtsCreate': update['mts'],
-        'price': update['price']
-      })
+      try:
+        return self.closePositionMarket({
+          'mtsCreate': update['mts'],
+          'price': update['price']
+        })
+      except PositionError as e:
+        logging.error(e)
 
   def onUpdateLong(self, update):
     iv = self.indicatorValues()
     s = iv['emaS']
     l = iv['emaL']
-
     if s > l:
-      return self.closePositionMarket({
-        'mtsCreate': update['mts'],
-        'price': update['price']
-      })
+      try:
+        return self.closePositionMarket({
+          'mtsCreate': update['mts'],
+          'price': update['price']
+        })
+      except PositionError as e:
+        logging.error(e)
+
 
 with open('btc_candle_data.json', 'r') as f:
   btcCandleData = json.load(f)
@@ -68,6 +79,6 @@ with open('btc_candle_data.json', 'r') as f:
     'tf': '1min',
   }, btcCandleData)
 
-  strategy = EMAStrategy(symbol='USDBTC')
+  strategy = EMAStrategy(backtesting=True, symbol='tBTCUSD')
 
   execOffline(candles, [], strategy)
