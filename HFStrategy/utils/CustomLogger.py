@@ -3,6 +3,7 @@ import logging
 RESET_SEQ = "\033[0m"
 COLOR_SEQ = "\033[1;%dm"
 BOLD_SEQ = "\033[1m"
+UNDERLINE_SEQ = "\033[04m"
 
 YELLOW = '\033[93m'
 WHITE = '\33[37m'
@@ -27,6 +28,14 @@ def formatter_message(message, use_color = True):
       message = message.replace("$RESET", "").replace("$BOLD", "")
   return message
 
+def format_word(message, word, color_seq, bold=False, underline=False):
+    replacer = color_seq + word + RESET_SEQ
+    if underline:
+        replacer = UNDERLINE_SEQ + replacer
+    if bold:
+        replacer = BOLD_SEQ + replacer
+    return message.replace(word, replacer)
+
 class Formatter(logging.Formatter):
   '''
   This Formatter adds some color to the output in order to help comprehension.
@@ -49,7 +58,7 @@ class CustomLogger(logging.Logger):
     '''
     FORMAT = "[$BOLD%(name)s$RESET] [%(levelname)s] %(message)s"
     COLOR_FORMAT = formatter_message(FORMAT, True)
-    TRADE = 40
+    TRADE = 50
 
     def __init__(self, name, logLevel='DEBUG'):
         logging.Logger.__init__(self, name, logLevel)                
@@ -62,8 +71,10 @@ class CustomLogger(logging.Logger):
     
     def trade(self, message, *args, **kws):
         if self.isEnabledFor(self.TRADE):
-            message = message.replace('CLOSE', YELLOW+'CLOSE'+RESET_SEQ)
-            message = message.replace('OPEN', LIGHT_BLUE+'OPEN'+RESET_SEQ)
+            message = format_word(message, 'CLOSED_ALL', RED, bold=True)
+            message = format_word(message, 'CLOSED', YELLOW, bold=True)
+            message = format_word(message, 'OPENED', LIGHT_BLUE, bold=True)
+            message = format_word(message, 'UPDATED', BLUE, bold=True)
             # Yes, logger takes its '*args' as 'args'.
             self._log(self.TRADE, message, args, **kws) 
 

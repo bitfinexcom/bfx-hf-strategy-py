@@ -12,6 +12,7 @@ class Strategy(PositionManager):
   def __init__(self, backtesting = False, symbol='tBTCUSD'):
     self.marketData = {}
     self.positions = {}
+    self.lastPrice = {}
     self.closedPositions = []
     self.candlePrice = 'close'
     self.backtesting = backtesting
@@ -125,6 +126,7 @@ class Strategy(PositionManager):
 
   def onPriceUpdate(self, update):
     symbol = update['symbol']
+    self.lastPrice[symbol] = (update['price'], update['mts'])
     # TODO: Handle stops/targets
     if symbol not in self.positions:
       self.onEnter(update)
@@ -159,6 +161,10 @@ class Strategy(PositionManager):
 
   def onPositionClose(self, params):
     pass
+  
+  def getLastPrice(self, symbol):
+    mtsPrice = self.lastPrice[symbol]
+    return mtsPrice[0], mtsPrice[1]
 
   def getPosition(self, symbol):
     return self.positions.get(symbol)

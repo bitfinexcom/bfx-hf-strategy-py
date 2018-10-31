@@ -79,5 +79,4 @@ with open('btc_candle_data.json', 'r') as f:
   }, btcCandleData)
 
   strategy = EMAStrategy(backtesting=True, symbol='tBTCUSD')
-
   execOffline(candles, [], strategy)

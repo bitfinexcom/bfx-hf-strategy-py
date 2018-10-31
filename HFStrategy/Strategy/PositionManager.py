@@ -30,6 +30,8 @@ class OrderType(Enum):
   '''
   MARKET = 1
   EXCHNAGE_MARKET = 2
+  LIMIT = 3
+  EXCHNAGE_LIMIT = 4
 
 class PositionManager(object):
 
@@ -42,16 +44,24 @@ class PositionManager(object):
     self.closePositionWithOrder(params)
   
   @logfunc
-  def closeOpenPositions(self, params):
-    pass
+  def closeOpenPositions(self):
+    positions = self.positions.items()
+    for key, pos in positions:
+      def close_pos(self):
+        price, mts = self.getLastPrice(pos.symbol)
+        self.closePositionMarket({
+          "symbol": pos.symbol,
+          "price": price,
+          "mts": mts
+        })
+      self._startNewThread(close_pos)
+    print ("Boom")
+    self.logger.trade('CLOSED_ALL {} open positions.'.format(len(positions)))
   
   @logfunc
   def closePositionLimit(self, params):
-    pass
-  
-  @logfunc
-  def closePositionLimit(self, params):
-    pass
+    params['type'] = OrderType.LIMIT if hasattr(self, 'margin') else OrderType.EXCHNAGE_LIMIT
+    return self.closePosition(params)
 
   @logfunc
   def closePositionMarket(self, params):
@@ -73,7 +83,7 @@ class PositionManager(object):
       order, trade = submitTrade(params, backtesting=self.backtesting)
       self.removePosition(prevPosition)
       self.logger.info("Position closed:")
-      self.logger.trade(" CLOSE " + str(prevPosition))
+      self.logger.trade("CLOSED " + str(prevPosition))
       self.onOrderFill({ trade: trade, order: order })
       self.onPositionClose({
         'position': prevPosition,
@@ -92,15 +102,17 @@ class PositionManager(object):
 
   @logfunc
   def openShortPosition(self, params):
-    pass
+    params['amount'] = -params.get('amount')
+    return self.openPosition(params)
 
   @logfunc
   def openLongPosition(self, params):
-    pass
+    return self.openPosition(params)
 
   @logfunc
   def openPositionLimit(self, params):
-    pass
+    params['type'] = OrderType.LIMIT if hasattr(self, 'margin') else OrderType.EXCHNAGE_LIMIT
+    return self.openPosition(params)
 
   @logfunc
   def openPositionMarket(self, params):
@@ -127,7 +139,7 @@ class PositionManager(object):
                           [trade], stop, target, tag)
       self.addPosition(position)
       self.logger.info("New Position opened:")
-      self.logger.trade("OPEN " + str(position))
+      self.logger.trade("OPENED " + str(position))
       self.onOrderFill({ trade: trade, order: order })
       self.onPositionUpdate({
         'position': position,
@@ -143,7 +155,8 @@ class PositionManager(object):
 
   @logfunc
   def openShortPositionLimit(self, params):
-    pass
+    params['amount'] = -params.get('amount')
+    return self.openPositionMarket(params)
 
   @logfunc
   def openLongPositionMarket(self, params):
@@ -151,7 +164,7 @@ class PositionManager(object):
 
   @logfunc
   def openLongPositionLimit(self, params):
-    pass
+    return self.openPositionLimit(params)
 
   #############################
   # Update Position functions #
@@ -159,62 +172,84 @@ class PositionManager(object):
 
   @logfunc
   def updatePosition(self, params):
-    pass
+    return self.updatePositionWithOrder(params)
 
   @logfunc
   def updateShortPosition(self, params):
-    pass
+    params['amount'] = -params.get('amount')
+    return self.updatePosition(params)
 
   @logfunc
   def updateLongPosition(self, params):
-    pass
+    return self.updatePosition(params)
 
   @logfunc
   def updateLongPositionLimit(self, params):
-    pass
+    params['type'] = OrderType.LIMIT if hasattr(self, 'margin') else OrderType.EXCHNAGE_LIMIT
+    return self.updatePosition(params)
 
   @logfunc
   def updateLongPositionMarket(self, params):
-    pass
+    params['type'] = OrderType.MARKET if hasattr(self, 'margin') else OrderType.EXCHNAGE_MARKET
+    return self.updatePosition(params)
 
   @logfunc
   def updatePositionLimit(self, params):
-    pass
+    params['type'] = OrderType.LIMIT if hasattr(self, 'margin') else OrderType.EXCHNAGE_LIMIT
+    return self.updatePosition(params)
 
   @logfunc
   def updatePositionMarket(self, params):
-    pass
+    params['type'] = OrderType.MARKET if hasattr(self, 'margin') else OrderType.EXCHNAGE_MARKET
+    return self.updatePosition(params)
 
   @logfunc
   def updatePositionWithOrder(self, params):
-    pass
+    symbol = params.get('symbol', self.symbol)
+    position = self.getPosition(symbol)
+    amount = params.get('amount', position.amount)
+    price = params.get('price', position.price)
+    stop = params.get('stop', position.stop)
+    target = params.get('target', position.target)
+    tag = params.get('tag', position.tag)
+
+    if symbol is None:
+      raise KeyError('Expected paramater value \'symbol\' but not present.')
+    # check for open positions
+    if self.getPosition(symbol) == None:
+      raise PositionError('No position exists for %s' % (symbol))
+
+    # Throw if order closes position?
+    def update(self):
+      order, trade = submitTrade(params, backtesting=self.backtesting)
+      newPosition = Position(symbol, amount, order.priceAvg,
+                          [trade], stop, target, tag)
+      self.addPosition(newPosition)
+      self.logger.info("Position updated:")
+      self.logger.trade("UPDATED FROM" + str(position))
+      self.logger.trade("UPDATED TO" + str(newPosition))
+      self.onOrderFill({ trade: trade, order: order })
+      self.onPositionUpdate({
+        'position': newPosition,
+        'order': order,
+        'trade': trade
+      })
+    self._startNewThread(update)
   
   @logfunc
   def updateShortPositionLimit(self, params):
-    pass
+    params['amount'] = -params.get('amount')
+    return self.updatePosition(params)
   
   @logfunc
   def updateShortPositionMarket(self, params):
-    pass
+    params['amount'] = -params.get('amount')
+    return self.updatePosition(params)
 
   ############################
   # Other Position functions #
   ############################
 
-  def createPositionObject(self, params):
-    pass
-  
-  def positionPl(self, params):
-    pass
-
-  def setPositionStop(self, params):
-    pass
-
-  def throwIfPosition(self, params):
-    pass
-  
-  def withNoPosition(self, params):
-    pass
-  
-  def withPosition(self, params):
-    pass
+  def setPositionStop(self, stop, symbol):
+    position = self.getPosition(symbol or self.symbol)
+    position.stop = stop

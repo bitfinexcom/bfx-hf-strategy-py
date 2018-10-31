@@ -11,15 +11,15 @@ def execOffline(candles, trades, strategy):
   print ("\nBacktesting complete: \n")
 
   # TODO: calculate fees and averages ect...
-  # TODO: calculate profit and loss correclty
+  # TODO: calculate profit and loss correctly
 
   profitLoss = 0
   for pos in strategy.closedPositions:
     print (pos)
-    
+
     if pos.amount < 0:
       profitLoss -= pos.price
     else:
       profitLoss += pos.price
   
-  print ("\nProfit loss: {}".format(profitLoss))
+  print ("\nProfit/loss: {}".format(profitLoss))

@@ -16,8 +16,9 @@ class Position:
         mainStr += " stop={}".format(self.stop)
     if self.target:
         mainStr += " target={}".format(self.target)
-    mainStr += " tag={}".format(self.tag)
+    if self.tag:
+      mainStr += " tag={}".format(self.tag)
     # format trades into string
-    mainStr += " tradesCount={}".format(len(self.trades))
+    mainStr += " tradeCount={}".format(len(self.trades))
     return mainStr
 
