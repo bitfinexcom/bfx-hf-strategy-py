@@ -167,10 +167,18 @@ class Strategy(PositionManager):
     self.positions[position.symbol] = position
   
   def removePosition(self, position):
-    self.closedPositions + [position]
+    self.closedPositions += [position]
     del self.positions[position.symbol]
 
   # Starts a thread with the given parameters
   def _startNewThread(self, func):
-    t = Thread(target=func, args=(self,))
-    t.start()
+    ## multithreading makes backtesting unreliable
+    ## since the main thread will continue to process the
+    ## backtest data but the threads with orders may take longer
+    if self.backtesting:
+      # Run on mainthread
+      func(self)
+    else:
+      # Spawn seperate thread
+      t = Thread(target=func, args=(self,))
+      t.start()

@@ -16,7 +16,8 @@ KEYWORD_COLORS = {
     'INFO': LIGHT_BLUE,
     'DEBUG': WHITE,
     'CRITICAL': YELLOW,
-    'ERROR': RED
+    'ERROR': RED,
+    'TRADE': '\33[102m\33[30m'
 }
 
 def formatter_message(message, use_color = True):
@@ -28,10 +29,7 @@ def formatter_message(message, use_color = True):
 
 class Formatter(logging.Formatter):
   '''
-  This logger adds some color to the output in order to help comprehension.
-  It also highlights certain outputs that include key phrases i.e anything
-  that has the word SHORT in it will be red. Anything with the word LONG in it
-  will be green.
+  This Formatter adds some color to the output in order to help comprehension.
   '''
   def __init__(self, msg, use_color = True):
     logging.Formatter.__init__(self, msg)
@@ -46,8 +44,12 @@ class Formatter(logging.Formatter):
     return logging.Formatter.format(self, record)
 
 class CustomLogger(logging.Logger):
+    '''
+    This logger adds extra logging functions such as logger.trade
+    '''
     FORMAT = "[$BOLD%(name)s$RESET] [%(levelname)s] %(message)s"
     COLOR_FORMAT = formatter_message(FORMAT, True)
+    TRADE = 40
 
     def __init__(self, name, logLevel='DEBUG'):
         logging.Logger.__init__(self, name, logLevel)                
@@ -55,6 +57,14 @@ class CustomLogger(logging.Logger):
         console = logging.StreamHandler()
         console.setFormatter(color_formatter)
         self.addHandler(console)
+        logging.addLevelName(self.TRADE, "TRADE")
         return
+    
+    def trade(self, message, *args, **kws):
+        if self.isEnabledFor(self.TRADE):
+            message = message.replace('CLOSE', YELLOW+'CLOSE'+RESET_SEQ)
+            message = message.replace('OPEN', LIGHT_BLUE+'OPEN'+RESET_SEQ)
+            # Yes, logger takes its '*args' as 'args'.
+            self._log(self.TRADE, message, args, **kws) 
 
 

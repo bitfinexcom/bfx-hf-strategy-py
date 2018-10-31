@@ -73,7 +73,7 @@ class PositionManager(object):
       order, trade = submitTrade(params, backtesting=self.backtesting)
       self.removePosition(prevPosition)
       self.logger.info("Position closed:")
-      self.logger.info(str(prevPosition))
+      self.logger.trade(" CLOSE " + str(prevPosition))
       self.onOrderFill({ trade: trade, order: order })
       self.onPositionClose({
         'position': prevPosition,
@@ -127,7 +127,7 @@ class PositionManager(object):
                           [trade], stop, target, tag)
       self.addPosition(position)
       self.logger.info("New Position opened:")
-      self.logger.info(str(position))
+      self.logger.trade("OPEN " + str(position))
       self.onOrderFill({ trade: trade, order: order })
       self.onPositionUpdate({
         'position': position,
