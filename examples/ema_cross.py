@@ -2,7 +2,6 @@ import json
 import sys
 import logging
 sys.path.append('../')
-logging.basicConfig(level=logging.INFO)
 
 from hfstrategy import Strategy, execOffline
 from HFStrategy import PositionError

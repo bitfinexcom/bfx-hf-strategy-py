@@ -2,12 +2,13 @@ import logging
 from enum import Enum
 from .orders import submitTrade
 from .Position import Position
+from ..utils.CustomLogger import CustomLogger
 
 # Simple wrapper to log the calling of a function
 # to enable set the logger to debug mode
 def logfunc(func):
     def wrapper(*args, **kwargs):
-      logging.debug("['{0}'] params: {1} kwargs: {2}".
+      args[0].logger.debug("['{0}'] params: {1} kwargs: {2}".
                     format(func.__name__, args, kwargs))
       return func(*args, **kwargs)
     return wrapper
@@ -71,8 +72,8 @@ class PositionManager(object):
     def submit(self):
       order, trade = submitTrade(params, backtesting=self.backtesting)
       self.removePosition(prevPosition)
-      logging.info("Position closed:")
-      logging.info(str(prevPosition))
+      self.logger.info("Position closed:")
+      self.logger.info(str(prevPosition))
       self.onOrderFill({ trade: trade, order: order })
       self.onPositionClose({
         'position': prevPosition,
@@ -125,8 +126,8 @@ class PositionManager(object):
       position = Position(symbol, amount, order.priceAvg,
                           [trade], stop, target, tag)
       self.addPosition(position)
-      logging.info("New Position opened:")
-      logging.info(str(position))
+      self.logger.info("New Position opened:")
+      self.logger.info(str(position))
       self.onOrderFill({ trade: trade, order: order })
       self.onPositionUpdate({
         'position': position,

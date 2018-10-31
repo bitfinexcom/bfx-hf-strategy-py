@@ -1,6 +1,9 @@
+import logging
+from threading import Thread
+
 from .PositionManager import PositionManager
 from .Position import Position
-from threading import Thread
+from ..utils.CustomLogger import CustomLogger
 
 def candleMarketDataKey(candle):
   return '%s-%s' % (candle['symbol'], candle['tf'])
@@ -13,6 +16,8 @@ class Strategy(PositionManager):
     self.candlePrice = 'close'
     self.backtesting = backtesting
     self.symbol = symbol
+    # initialise custom logger
+    self.logger = CustomLogger('HFStrategy', logLevel='INFO')
     super(Strategy, self).__init__()
 
   def indicatorValues(self):
