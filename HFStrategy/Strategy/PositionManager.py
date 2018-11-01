@@ -54,7 +54,6 @@ class PositionManager(object):
           "mts": mts
         })
       self._startNewThread(close_pos)
-    print ("Boom")
     self.logger.trade('CLOSED_ALL {} open positions.'.format(len(positions)))
   
   @logfunc

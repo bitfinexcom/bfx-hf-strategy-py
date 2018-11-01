@@ -38,7 +38,7 @@ def format_word(message, word, color_seq, bold=False, underline=False):
 
 class Formatter(logging.Formatter):
   '''
-  This Formatter adds some color to the output in order to help comprehension.
+  This Formatted simply colors in the levelname i.e 'INFO', 'DEBUG'
   '''
   def __init__(self, msg, use_color = True):
     logging.Formatter.__init__(self, msg)
@@ -54,7 +54,8 @@ class Formatter(logging.Formatter):
 
 class CustomLogger(logging.Logger):
     '''
-    This logger adds extra logging functions such as logger.trade
+    This adds extra logging functions such as logger.trade and also
+    sets the logger to use the custom formatter
     '''
     FORMAT = "[$BOLD%(name)s$RESET] [%(levelname)s] %(message)s"
     COLOR_FORMAT = formatter_message(FORMAT, True)

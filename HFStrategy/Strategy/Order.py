@@ -11,4 +11,4 @@ class Order:
   
   def __str__(self):
     ''' Allow us to print the Order object in a pretty format '''
-    return "Order <'{0}'>".format(self.symbol)
+    return "Order <'{0}' mtsCreate={1}>".format(self.symbol, self.mtsCreate)
