@@ -5,4 +5,4 @@ class Trade:
   
   def __str__(self):
     ''' Allow us to print the Trade object in a pretty format '''
-    return "Trade (order='{0}')".format(self.order)
+    return "Trade <order='{0}'>".format(self.order)

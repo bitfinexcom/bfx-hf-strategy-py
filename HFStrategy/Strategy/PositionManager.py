@@ -1,6 +1,5 @@
 import logging
 from enum import Enum
-from .orders import submitTrade
 from .Position import Position
 from ..utils.CustomLogger import CustomLogger
 
@@ -9,7 +8,7 @@ from ..utils.CustomLogger import CustomLogger
 def logfunc(func):
     def wrapper(*args, **kwargs):
       args[0].logger.debug("['{0}'] params: {1} kwargs: {2}".
-                    format(func.__name__, args, kwargs))
+                           format(func.__name__, args, kwargs))
       return func(*args, **kwargs)
     return wrapper
 
@@ -80,7 +79,7 @@ class PositionManager(object):
     
     amount = prevPosition.amount * -1
     def submit(self):
-      order, trade = submitTrade(params, backtesting=self.backtesting)
+      order, trade = self.OrderManager.submitTrade(params)
       self.removePosition(prevPosition)
       self.logger.info("Position closed:")
       self.logger.trade("CLOSED " + str(prevPosition))
@@ -134,7 +133,7 @@ class PositionManager(object):
     # create submit functions so its easier to pass onto
     # a new thread
     def submit(self):
-      order, trade = submitTrade(params, backtesting=self.backtesting)
+      order, trade = self.OrderManager.submitTrade(params)
       position = Position(symbol, amount, order.priceAvg,
                           [trade], stop, target, tag)
       self.addPosition(position)
@@ -221,7 +220,7 @@ class PositionManager(object):
 
     # Throw if order closes position?
     def update(self):
-      order, trade = submitTrade(params, backtesting=self.backtesting)
+      order, trade = self.OrderManager.submitTrade(params)
       newPosition = Position(symbol, amount, order.priceAvg,
                           [trade], stop, target, tag)
       self.addPosition(newPosition)

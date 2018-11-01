@@ -4,12 +4,13 @@ from threading import Thread
 from .PositionManager import PositionManager
 from .Position import Position
 from ..utils.CustomLogger import CustomLogger
+from .OrderManager import OrderManager
 
 def candleMarketDataKey(candle):
   return '%s-%s' % (candle['symbol'], candle['tf'])
 
 class Strategy(PositionManager):
-  def __init__(self, backtesting = False, symbol='tBTCUSD'):
+  def __init__(self, backtesting = False, symbol='tBTCUSD', logLevel='INFO'):
     self.marketData = {}
     self.positions = {}
     self.lastPrice = {}
@@ -18,22 +19,20 @@ class Strategy(PositionManager):
     self.backtesting = backtesting
     self.symbol = symbol
     # initialise custom logger
-    self.logger = CustomLogger('HFStrategy', logLevel='INFO')
+    self.logger = CustomLogger('HFStrategy', logLevel=logLevel)
+    self.OrderManager = OrderManager(backtesting=backtesting, logLevel=logLevel)
     super(Strategy, self).__init__()
 
   def indicatorValues(self):
     values = {}
-
     for key in self.indicators:
       values[key] = self.indicators[key].v()
-    
     return values
 
   def indicatorsReady(self):
     for key in self.indicators:
       if not self.indicators[key].ready():
         return False
-  
     return True
 
   def addIndicatorData(self, dataType, data):
@@ -71,49 +70,27 @@ class Strategy(PositionManager):
       self.marketData[dataKey][-1] = candle
     else:
       self.marketData[dataKey] = [candle]
- 
-  def onCandle(self, candle):
-    self.addIndicatorData('candle', candle)
-    candle['iv'] = self.indicatorValues()
-    self.addCandleData(candle)
-
-    if self.indicatorsReady():
-      self.onPriceUpdate({
-        'mts': candle['mts'],
-        'price': candle[self.candlePrice],
-        'symbol': candle['symbol'],
-        'candle': candle,
-        'type': 'candle'
-      })
-
-  def onSeedCandle(self, candle):
-    self.addIndicatorData('candle', candle)
-    candle['iv'] = self.indicatorValues()
-    self.addCandleData(candle)
-
-  def onCandleUpdate(self, candle):
-    self.updateIndicatorData('candle', candle)
-    candle['iv'] = self.indicatorValues()
-    self.updateCandleData(candle)
-
-    if self.indicatorsReady():
-      self.onPriceUpdate({
-        'mts': candle['mts'],
-        'price': candle[self.candlePrice],
-        'symbol': candle['symbol'],
-        'candle': candle,
-        'type': 'candle'
-      })
   
-  def onSeedCandleUpdate(self, candle):
-    self.updateIndicatorData('candle', candle)
+  def getLastPrice(self, symbol):
+    mtsPrice = self.lastPrice[symbol]
+    return mtsPrice[0], mtsPrice[1]
 
+  def getPosition(self, symbol):
+    return self.positions.get(symbol)
+
+  def addPosition(self, position):
+    self.positions[position.symbol] = position
+  
+  def removePosition(self, position):
+    self.closedPositions += [position]
+    del self.positions[position.symbol]
+  
   def onTrade(self, trade):
     price = trade['price']
     self.updateIndicatorData('trade', price)
 
     if self.indicatorsReady():
-      self.onPriceUpdate({
+      self._onPriceUpdate({
         'mts': trade['mts'],
         'price': price,
         'symbol': trade['symbol'],
@@ -121,10 +98,60 @@ class Strategy(PositionManager):
         'type': 'candle'
       })
 
-  def onSeedTrade(self, trade):
+  def onCandle(self, candle):
+    self.addIndicatorData('candle', candle)
+    candle['iv'] = self.indicatorValues()
+    self.addCandleData(candle)
+
+    if self.indicatorsReady():
+      self._onPriceUpdate({
+        'mts': candle['mts'],
+        'price': candle[self.candlePrice],
+        'symbol': candle['symbol'],
+        'candle': candle,
+        'type': 'candle'
+      })
+  
+
+  # Starts a thread with the given parameters
+  def _startNewThread(self, func):
+    ## multithreading makes backtesting unreliable
+    ## since the main thread will continue to process the
+    ## backtest data but the threads with orders may take longer
+    if self.backtesting:
+      # Run on mainthread
+      func(self)
+    else:
+      # Spawn seperate thread
+      t = Thread(target=func, args=(self,))
+      t.start()
+
+  def _onSeedCandle(self, candle):
+    self.addIndicatorData('candle', candle)
+    candle['iv'] = self.indicatorValues()
+    self.addCandleData(candle)
+
+  def _onCandleUpdate(self, candle):
+    self.updateIndicatorData('candle', candle)
+    candle['iv'] = self.indicatorValues()
+    self.updateCandleData(candle)
+
+    if self.indicatorsReady():
+      self._onPriceUpdate({
+        'mts': candle['mts'],
+        'price': candle[self.candlePrice],
+        'symbol': candle['symbol'],
+        'candle': candle,
+        'type': 'candle'
+      })
+  
+  def _onSeedCandleUpdate(self, candle):
+    self.updateIndicatorData('candle', candle)
+
+  def _onSeedTrade(self, trade):
     self.updateIndicatorData('trade', trade['price'])
 
-  def onPriceUpdate(self, update):
+  def _onPriceUpdate(self, update):
     symbol = update['symbol']
     self.lastPrice[symbol] = (update['price'], update['mts'])
     # TODO: Handle stops/targets
@@ -140,6 +167,10 @@ class Strategy(PositionManager):
         self.onUpdateLong(update)
       else:
         self.onUpdateShort(update)
+  
+  ############################
+  #      Function Hooks      #
+  ############################
 
   def onEnter(self, update):
     pass
@@ -161,30 +192,3 @@ class Strategy(PositionManager):
 
   def onPositionClose(self, params):
     pass
-  
-  def getLastPrice(self, symbol):
-    mtsPrice = self.lastPrice[symbol]
-    return mtsPrice[0], mtsPrice[1]
-
-  def getPosition(self, symbol):
-    return self.positions.get(symbol)
-
-  def addPosition(self, position):
-    self.positions[position.symbol] = position
-  
-  def removePosition(self, position):
-    self.closedPositions += [position]
-    del self.positions[position.symbol]
-
-  # Starts a thread with the given parameters
-  def _startNewThread(self, func):
-    ## multithreading makes backtesting unreliable
-    ## since the main thread will continue to process the
-    ## backtest data but the threads with orders may take longer
-    if self.backtesting:
-      # Run on mainthread
-      func(self)
-    else:
-      # Spawn seperate thread
-      t = Thread(target=func, args=(self,))
-      t.start()

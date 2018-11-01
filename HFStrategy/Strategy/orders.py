@@ -3,6 +3,8 @@ import logging
 from .Order import Order
 from .Trade import Trade
 
+logger = logging.getLogger('HFStrategy')
+
 def submitOrder(orderParams):
   pass
 
@@ -12,6 +14,7 @@ def _simulateOrderFill(orderParams):
   return order
 
 def submitTrade(orderParams, backtesting):
+  logger.info("boom")
   if (backtesting):
     # simulate
     order = _simulateOrderFill(orderParams)
