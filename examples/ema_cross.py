@@ -3,7 +3,7 @@ import sys
 import logging
 sys.path.append('../')
 
-from hfstrategy import Strategy, execOffline
+from HFStrategy import Strategy, execOffline
 from HFStrategy import PositionError
 from bfxhfindicators import EMA
 
