@@ -48,12 +48,14 @@ class Strategy(PositionManager):
   def updateIndicatorData(self, dataType, data):
     for key in self.indicators:
       i = self.indicators[key]
+      dt = i.get_data_type()
+      dk = i.get_data_key()
   
-      if i.dataType == '*' or i.dataType == dataType:
-        if i.dataKey == '*':
-          i.update(data)
+      if dt == '*' or dt == dataType:
+        if dk == '*':
+          i.add(data)
         else:
-          i.update(data[i.dataKey])
+          i.add(data[dk])
 
   def addCandleData(self, candle):
     dataKey = candleMarketDataKey(candle)
