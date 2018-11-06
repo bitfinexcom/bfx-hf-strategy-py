@@ -86,21 +86,9 @@ class Strategy(PositionManager):
     self.positions[position.symbol] = position
   
   def removePosition(self, position):
+    self.logger.debug("Archiving closed position {}".format(position))
     self.closedPositions += [position]
     del self.positions[position.symbol]
-  
-  def onTrade(self, trade):
-    price = trade['price']
-    self.updateIndicatorData('trade', price)
-
-    if self.indicatorsReady():
-      self._onPriceUpdate({
-        'mts': trade['mts'],
-        'price': price,
-        'symbol': trade['symbol'],
-        'candle': trade,
-        'type': 'candle'
-      })
 
   def onCandle(self, candle):
     self.addIndicatorData('candle', candle)
@@ -116,7 +104,6 @@ class Strategy(PositionManager):
         'type': 'candle'
       })
   
-
   # Starts a thread with the given parameters
   def _startNewThread(self, func):
     ## multithreading makes backtesting unreliable
@@ -189,6 +176,9 @@ class Strategy(PositionManager):
     pass
 
   def onOrderFill(self, params):
+    pass
+
+  def onTrade(self, trade):
     pass
   
   def onPositionUpdate(self, params):
