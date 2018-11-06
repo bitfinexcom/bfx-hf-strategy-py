@@ -1,4 +1,5 @@
 import datetime
+from .Trade import Trade
 
 class Position:
   def __init__(self, symbol, stop=None, target=None, tag=''):
@@ -10,8 +11,10 @@ class Position:
 
     self.price = 0
     self.profitLoss = 0
+    self.netProfitLoss = 0
     self.amount = 0
     self.totalFees = 0
+    self.volume = 0
     self.trades = []
 
     self._isOpen = True
@@ -23,7 +26,13 @@ class Position:
 
     self.trades += [trade]
     self.totalFees += trade.fee
-    self.profitLoss = posNV + tradeNV
+    self.volume += abs(tradeNV)
+
+    if trade.direction == Trade.SHORT:
+      self.profitLoss = abs(tradeNV) - abs(posNV)
+    else:
+      self.profitLoss = abs(posNV) - abs(tradeNV)
+    self.netProfitLoss = self.profitLoss - self.totalFees
 
     if len(self.trades) == 0:
       self.amount = trade.amount
