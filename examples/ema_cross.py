@@ -66,6 +66,7 @@ class EMAStrategy(Strategy):
 
 with open('btc_candle_data.json', 'r') as f:
   btcCandleData = json.load(f)
+  btcCandleData.reverse()
   candles = map(lambda candleArray: {
     'mts': candleArray[0],
     'open': candleArray[1],
@@ -78,4 +79,4 @@ with open('btc_candle_data.json', 'r') as f:
   }, btcCandleData)
 
   strategy = EMAStrategy(backtesting=True, symbol='tBTCUSD')
-  execOffline(candles, [], strategy)
+  execOffline(candles, strategy)
