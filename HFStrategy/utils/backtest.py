@@ -14,10 +14,9 @@ def logTrades(positions):
   print(x)
 
 def execOffline(candles, trades, strategy):
-  currentTrade = 0
-
   for candle in candles:
     strategy.onCandle(candle)
+  strategy.closeOpenPositions()
 
   print ("\nBacktesting complete: \n")
 
