@@ -42,7 +42,7 @@ class EMAStrategy(Strategy):
     iv = self.indicatorValues()
     s = iv['emaS']
     l = iv['emaL']
-    if s < l:
+    if s > l:
       try:
         return self.closePositionMarket({
           'mtsCreate': update['mts'],
@@ -55,7 +55,7 @@ class EMAStrategy(Strategy):
     iv = self.indicatorValues()
     s = iv['emaS']
     l = iv['emaL']
-    if s > l:
+    if s < l:
       try:
         return self.closePositionMarket({
           'mtsCreate': update['mts'],
@@ -63,7 +63,6 @@ class EMAStrategy(Strategy):
         })
       except PositionError as e:
         logging.error(e)
-
 
 with open('btc_candle_data.json', 'r') as f:
   btcCandleData = json.load(f)
@@ -75,7 +74,7 @@ with open('btc_candle_data.json', 'r') as f:
     'low': candleArray[4],
     'volume': candleArray[5],
     'symbol': 'tBTCUSD',
-    'tf': '1min',
+    'tf': '1hr',
   }, btcCandleData)
 
   strategy = EMAStrategy(backtesting=True, symbol='tBTCUSD')
