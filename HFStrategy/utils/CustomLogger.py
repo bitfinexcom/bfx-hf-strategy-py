@@ -72,10 +72,10 @@ class CustomLogger(logging.Logger):
     
     def trade(self, message, *args, **kws):
         if self.isEnabledFor(self.TRADE):
-            message = format_word(message, 'CLOSED_ALL', RED, bold=True)
-            message = format_word(message, 'CLOSED', YELLOW, bold=True)
-            message = format_word(message, 'OPENED', LIGHT_BLUE, bold=True)
-            message = format_word(message, 'UPDATED', BLUE, bold=True)
+            message = format_word(message, 'CLOSED ', YELLOW, bold=True)
+            message = format_word(message, 'OPENED ', LIGHT_BLUE, bold=True)
+            message = format_word(message, 'UPDATED ', BLUE, bold=True)
+            message = format_word(message, 'CLOSED_ALL ', RED, bold=True)
             # Yes, logger takes its '*args' as 'args'.
             self._log(self.TRADE, message, args, **kws) 
 
