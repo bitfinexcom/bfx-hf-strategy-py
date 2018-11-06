@@ -69,22 +69,25 @@ class PositionManager(object):
   @logfunc
   def closePositionWithOrder(self, params):
     symbol = params.get('symbol', self.symbol)
-    prevPosition = self.getPosition(symbol)
+    position = self.getPosition(symbol)
 
     if symbol is None:
       raise KeyError('Expected paramater value \'symbol\' but not present.')
-    if self.getPosition == None:
+    if position == None:
       raise PositionError('No position exists for %s' % (symbol))
-    
-    amount = prevPosition.amount * -1
+
+    params['amount'] = position.amount * -1
     def submit(self):
       order, trade = self.OrderManager.submitTrade(params)
-      self.removePosition(prevPosition)
+      position.addTrade(trade)
+      position.close()
+      self.removePosition(position)
       self.logger.info("Position closed:")
-      self.logger.trade("CLOSED " + str(prevPosition))
+      self.logger.trade("CLOSED " + str(trade))
       self.onOrderFill({ trade: trade, order: order })
+      self.onTrade(trade)
       self.onPositionClose({
-        'position': prevPosition,
+        'position': position,
         'order': order,
         'trade': trade
       })
@@ -133,12 +136,13 @@ class PositionManager(object):
     # a new thread
     def submit(self):
       order, trade = self.OrderManager.submitTrade(params)
-      position = Position(symbol, amount, order.priceAvg,
-                          [trade], stop, target, tag)
+      position = Position(symbol, stop, target, tag)
+      position.addTrade(trade)
       self.addPosition(position)
       self.logger.info("New Position opened:")
-      self.logger.trade("OPENED " + str(position))
+      self.logger.trade("OPENED " + str(trade))
       self.onOrderFill({ trade: trade, order: order })
+      self.onTrade(trade)
       self.onPositionUpdate({
         'position': position,
         'order': order,
@@ -205,11 +209,6 @@ class PositionManager(object):
   def updatePositionWithOrder(self, params):
     symbol = params.get('symbol', self.symbol)
     position = self.getPosition(symbol)
-    amount = params.get('amount', position.amount)
-    price = params.get('price', position.price)
-    stop = params.get('stop', position.stop)
-    target = params.get('target', position.target)
-    tag = params.get('tag', position.tag)
 
     if symbol is None:
       raise KeyError('Expected paramater value \'symbol\' but not present.')
@@ -220,15 +219,13 @@ class PositionManager(object):
     # Throw if order closes position?
     def update(self):
       order, trade = self.OrderManager.submitTrade(params)
-      newPosition = Position(symbol, amount, order.priceAvg,
-                          [trade], stop, target, tag)
-      self.addPosition(newPosition)
+      position.addTrade(trade)
       self.logger.info("Position updated:")
-      self.logger.trade("UPDATED FROM" + str(position))
-      self.logger.trade("UPDATED TO" + str(newPosition))
+      self.logger.trade("UPDATED POSITION " + str(trade))
       self.onOrderFill({ trade: trade, order: order })
+      self.onTrade(trade)
       self.onPositionUpdate({
-        'position': newPosition,
+        'position': position,
         'order': order,
         'trade': trade
       })

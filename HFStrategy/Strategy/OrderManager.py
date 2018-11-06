@@ -19,7 +19,10 @@ class OrderManager(object):
   def _simulateOrderFill(self, orderParams):
     self.logger.info('Strategy in backtest mode, Simulating order fill.')
     priceAvg = orderParams.get('price')
-    return Order(orderParams.get('symbol'), priceAvg)
+    amount = orderParams.get('amount')
+    symbol = orderParams.get('symbol')
+    mtsCreate = orderParams.get('mtsCreate')
+    return Order(symbol, amount, priceAvg, mtsCreate)
 
   def submitTrade(self, orderParams):
     if (self.backtesting):
