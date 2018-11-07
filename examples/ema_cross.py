@@ -1,13 +1,12 @@
-import json
 import sys
 import logging
 sys.path.append('../')
 
-from HFStrategy import Strategy, execOffline
+from HFStrategy import BacktestStrategy
 from HFStrategy import PositionError
 from bfxhfindicators import EMA
 
-class EMAStrategy(Strategy):
+class EMAStrategy(BacktestStrategy):
   indicators = {
     'emaL': EMA([100]),
     'emaS': EMA([20])
@@ -54,19 +53,5 @@ class EMAStrategy(Strategy):
       except PositionError as e:
         logging.error(e)
 
-with open('btc_candle_data.json', 'r') as f:
-  btcCandleData = json.load(f)
-  btcCandleData.reverse()
-  candles = map(lambda candleArray: {
-    'mts': candleArray[0],
-    'open': candleArray[1],
-    'close': candleArray[2],
-    'high': candleArray[3],
-    'low': candleArray[4],
-    'volume': candleArray[5],
-    'symbol': 'tBTCUSD',
-    'tf': '1hr',
-  }, btcCandleData)
-
-  strategy = EMAStrategy(backtesting=True, symbol='tBTCUSD')
-  execOffline(candles, strategy)
+strategy = EMAStrategy(symbol='tBTCUSD')
+strategy.runWithCandlesFile('btc_candle_data.json', symbol='tBTCUSD', tf='1hr')
