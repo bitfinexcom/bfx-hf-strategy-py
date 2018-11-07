@@ -12,7 +12,7 @@ def logTrades(positions):
       lastItem = i+1 == len(pos.trades)
       pl = round(pos.netProfitLoss, 2)
       x.add_row([t.date, pos.symbol, t.direction, abs(t.amount), round(t.price, 2),
-                round(t.fee, 2), pl if lastItem else 0, ''])
+                round(t.fee, 2), pl if lastItem else 0, t.tag])
 
   print(x)
 

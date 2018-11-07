@@ -16,18 +16,15 @@ class OrderManager(object):
     self.logger.info('Strategy in live mode, submitting order.')
     pass
 
-  def _simulateOrderFill(self, orderParams):
+  def _simulateOrderFill(self, symbol, price, amount, mtsCreate, **kwargs):
     self.logger.info('Strategy in backtest mode, Simulating order fill.')
-    priceAvg = orderParams.get('price')
-    amount = orderParams.get('amount')
-    symbol = orderParams.get('symbol')
-    mtsCreate = orderParams.get('mtsCreate')
-    return Order(symbol, amount, priceAvg, mtsCreate)
+    return Order(symbol, amount, price, mtsCreate)
 
-  def submitTrade(self, orderParams):
+  def submitTrade(self, *args, **kwargs):
+    tag = kwargs.get('tag', '')
     if (self.backtesting):
-      order = self._simulateOrderFill(orderParams)
-      trade = Trade(order)
+      order = self._simulateOrderFill(*args, **kwargs)
+      trade = Trade(order, tag=tag)
       return order, trade
     else:
       ## trade for real

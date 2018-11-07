@@ -50,7 +50,7 @@ class PositionManager(object):
       def close_pos(self):
         price, mts = self.getLastPrice(pos.symbol)
         self.closePositionMarket(
-            symbol=pos.symbol, price=price, mtsCreate=mts)
+            symbol=pos.symbol, price=price, mtsCreate=mts, tag='Close all positions')
       self._startNewThread(close_pos)
     self.logger.trade('CLOSED_ALL {} open positions.'.format(count))
   
@@ -68,20 +68,14 @@ class PositionManager(object):
   def closePositionWithOrder(self, price, mtsCreate, symbol=None, **kwargs):
     symbol = symbol or self.symbol
     position = self.getPosition(symbol)
-
-    if symbol is None:
-      raise KeyError('Expected paramater value \'symbol\' but not present.')
+  
     if position == None:
       raise PositionError('No position exists for %s' % (symbol))
 
     amount = position.amount * -1
     def submit(self):
-      order, trade = self.OrderManager.submitTrade({
-        'price': price,
-        'amount': amount,
-        'symbol': symbol,
-        'mtsCreate': mtsCreate
-      })
+      order, trade = self.OrderManager.submitTrade(symbol, price, amount,
+          mtsCreate, **kwargs)
       position.addTrade(trade)
       position.close()
       self.removePosition(position)
@@ -126,23 +120,15 @@ class PositionManager(object):
   def openPositionWithOrder(self, amount, price, mtsCreate, symbol=None, 
       stop=None, target=None, tag='', **kwargs):
     symbol = symbol or self.symbol
-    # stop = params.get('stop', None)
-    # target = params.get('target', None)
-    # tag = params.get('tag', None)
-    if symbol is None:
-      raise KeyError('Expected paramater value \'symbol\' but not present.')
     # check for open positions
     if self.getPosition(symbol) != None:
       raise PositionError('A position already exists for %s' % (symbol))
+
     # create submit functions so its easier to pass onto
     # a new thread
     def submit(self):
-      order, trade = self.OrderManager.submitTrade({
-        'price': price,
-        'amount': amount,
-        'symbol': symbol,
-        'mtsCreate': mtsCreate
-      })
+      order, trade = self.OrderManager.submitTrade(symbol, price, amount,
+          mtsCreate, **kwargs)
       position = Position(symbol, stop, target, tag)
       position.addTrade(trade)
       self.addPosition(position)
@@ -211,22 +197,16 @@ class PositionManager(object):
 
   @logfunc
   def updatePositionWithOrder(self, price, amount, mtsCreate, symbol=None, **kwargs):
+    symbol = symbol or self.symbol
     position = self.getPosition(symbol)
 
-    if symbol is None:
-      raise KeyError('Expected paramater value \'symbol\' but not present.')
     # check for open positions
     if self.getPosition(symbol) == None:
       raise PositionError('No position exists for %s' % (symbol))
 
-    # Throw if order closes position?
     def update(self):
-      order, trade = self.OrderManager.submitTrade({
-        'price': price,
-        'amount': amount,
-        'symbol': symbol,
-        'mtsCreate': mtsCreate
-      })
+      order, trade = self.OrderManager.submitTrade(symbol, price, amount,
+          mtsCreate, tag='Update position' **kwargs)
       position.addTrade(trade)
       self.logger.info("Position updated:")
       self.logger.trade("UPDATED POSITION " + str(trade))
