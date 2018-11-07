@@ -21,20 +21,14 @@ class EMAStrategy(Strategy):
     if emaS.crossed(l):
       if s > l:
         try:
-          return self.openLongPositionMarket({
-            'mtsCreate': update['mts'],
-            'price': update['price'],
-            'amount': 1,
-          })
+          self.openLongPositionMarket(
+              mtsCreate=update['mts'], price=update['price'], amount=1)
         except PositionError as e:
           logging.error(e)
       else:
         try:
-          return self.openShortPositionMarket({
-            'mtsCreate': update['mts'],
-            'price': update['price'],
-            'amount': 1,
-          })
+          self.openShortPositionMarket(
+              mtsCreate=update['mts'], price=update['price'], amount=1)
         except PositionError as e:
           logging.error(e)
 
@@ -44,10 +38,8 @@ class EMAStrategy(Strategy):
     l = iv['emaL']
     if s > l:
       try:
-        return self.closePositionMarket({
-          'mtsCreate': update['mts'],
-          'price': update['price']
-        })
+        self.closePositionMarket(
+          mtsCreate=update['mts'], price=update['price'])
       except PositionError as e:
         logging.error(e)
 
@@ -57,10 +49,8 @@ class EMAStrategy(Strategy):
     l = iv['emaL']
     if s < l:
       try:
-        return self.closePositionMarket({
-          'mtsCreate': update['mts'],
-          'price': update['price']
-        })
+        self.closePositionMarket(
+          mtsCreate=update['mts'], price=update['price'])
       except PositionError as e:
         logging.error(e)
 
