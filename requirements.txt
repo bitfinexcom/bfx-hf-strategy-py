@@ -1,0 +1,3 @@
+btfxwss==1.2.4
+prettytable==0.7.2
+websocket-client==0.54.0
