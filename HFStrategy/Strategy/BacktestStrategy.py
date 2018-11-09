@@ -1,8 +1,10 @@
 import json
+import websocket
 
 from prettytable import PrettyTable
 from .Strategy import Strategy
 from ..utils.CustomLogger import CustomLogger
+from ..utils.WebSockets import DataServerWebsocket
 
 def logTrades(positions):
   x = PrettyTable()
@@ -20,36 +22,57 @@ def logTrades(positions):
 class BacktestStrategy(Strategy):
   '''
   This class simply wraps the base Strategy class bus adds certain functions that allows
-  it to perform backtests such as runWithCandles.
+  it to perform backtests such as executeOffline and executeOnline.
   '''
   
   def __init__(self, *args, **kwargs):
-    super(BacktestStrategy, self).__init__(backtesting=True, *args, **kwargs)
+    super(BacktestStrategy, self).__init__(multiThreading=False, backtesting=True, *args, **kwargs)
     self.bLogger = CustomLogger('HFBacktesStrategy', logLevel='INFO')
 
-  def runWithCandlesFile(self, candlesFile, symbol='tBTCUSD', tf='1hr'):
-    with open(candlesFile, 'r') as f:
-      candleData = json.load(f)
-      candleData.reverse()
-      candles = map(lambda candleArray: {
-        'mts': candleArray[0],
-        'open': candleArray[1],
-        'close': candleArray[2],
-        'high': candleArray[3],
-        'low': candleArray[4],
-        'volume': candleArray[5],
-        'symbol': symbol,
-        'tf': tf,
-      }, candleData)
-      self.runWithCandles(candles)
+  def executeOffline(self, file=None, candles=None, symbol='tBTCUSD', tf='1hr'):
+    if candles:
+      return self._executeWithCandles(candles)
+    elif file:
+      with open(file, 'r') as f:
+        candleData = json.load(f)
+        candleData.reverse()
+        candles = map(lambda candleArray: self.format_candle(
+          candleArray[0], candleArray[1], candleArray[2], candleArray[3],
+          candleArray[4], candleArray[5], symbol, tf
+        ))
+        self._executeWithCandles(candles)
+    else:
+      raise KeyError("Expected either 'candles' or 'file' in parameters.")
   
-  def runWithCandles(self, candles):
+  def _executeWithCandles(self, candles):
     for candle in candles:
       self.onCandle(candle)
-    self.closeOpenPositions()
     self._finish()
   
+  def format_candle(self, mts, open, close, high, low, volume, symbol, tf):
+    return {
+      'mts': mts,
+      'open': open,
+      'close': close,
+      'high': high,
+      'low': low,
+      'volume':volume,
+      'symbol': symbol,
+      'tf': tf,
+      }
+
+  def executeWithDataServer(self, fromDate, toDate, host='ws://localhost:8899',
+      trades=True, candles=True, tf='1m', candleFields="*", tradeFields="*", sync=True):
+    DataServerWebsocket(
+      fromDate, toDate, self.symbol, trades, candles, tf, candleFields, 
+      tradeFields, sync, host,
+      onCandleHook=lambda candle: self.onCandle(candle),
+      onTradeHook=lambda trade: self.onTrade(trade),
+      onCompleteHook=lambda: self._finish()
+    )
+  
   def _finish(self):
+    self.closeOpenPositions()
     print ("\nBacktesting complete: \n")
 
     profitLoss = 0

@@ -10,13 +10,14 @@ def candleMarketDataKey(candle):
   return '%s-%s' % (candle['symbol'], candle['tf'])
 
 class Strategy(PositionManager):
-  def __init__(self, backtesting = False, symbol='tBTCUSD', logLevel='INFO'):
+  def __init__(self, multiThreading=True, backtesting = False, symbol='tBTCUSD', logLevel='INFO'):
     self.marketData = {}
     self.positions = {}
     self.lastPrice = {}
     self.closedPositions = []
     self.candlePrice = 'close'
     self.backtesting = backtesting
+    self.multiThreading = multiThreading
     self.symbol = symbol
     # initialise custom logger
     self.logger = CustomLogger('HFStrategy', logLevel=logLevel)
@@ -109,7 +110,7 @@ class Strategy(PositionManager):
     ## multithreading makes backtesting unreliable
     ## since the main thread will continue to process the
     ## backtest data but the threads with orders may take longer
-    if self.backtesting:
+    if not self.multiThreading:
       # Run on mainthread
       func(self)
     else:

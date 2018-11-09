@@ -28,5 +28,7 @@ class OrderManager(object):
       return order, trade
     else:
       ## trade for real
-      return None, None
+      order = self._simulateOrderFill(*args, **kwargs)
+      trade = Trade(order, tag=tag)
+      return order, trade
 
