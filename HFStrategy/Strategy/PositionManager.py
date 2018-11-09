@@ -47,11 +47,9 @@ class PositionManager(object):
     openPositions = list(self.positions.values())
     count = len(openPositions)
     for pos in openPositions:
-      def close_pos(self):
-        price, mts = self.getLastPrice(pos.symbol)
-        self.closePositionMarket(
-            symbol=pos.symbol, price=price, mtsCreate=mts, tag='Close all positions')
-      self._startNewThread(close_pos)
+      price, mts = self.getLastPrice(pos.symbol)
+      self.closePositionMarket(
+          symbol=pos.symbol, price=price, mtsCreate=mts, tag='Close all positions')
     self.logger.trade('CLOSED_ALL {} open positions.'.format(count))
   
   @logfunc
