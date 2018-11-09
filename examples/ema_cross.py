@@ -53,5 +53,12 @@ class EMAStrategy(BacktestStrategy):
       except PositionError as e:
         logging.error(e)
 
-strategy = EMAStrategy(symbol='tBTCUSD')
-strategy.runWithCandlesFile('btc_candle_data.json', symbol='tBTCUSD', tf='1hr')
+# Execute with local offline backtest
+strategy = EMAStrategy(symbol='tXMRUSD')
+# strategy.executeOffline(file='btc_candle_data.json', symbol='tBTCUSD', tf='1hr')
+
+# Execute with data-backtest server
+# import time
+# now = int(round(time.time() * 1000))
+# then = now - (1000 * 60 * 60 * 24 * 5) # 5 days ago
+# strategy.executeWithDataServer(then, now)
