@@ -1,19 +1,12 @@
 import websocket
 import json
+import time
 
 from .CustomLogger import CustomLogger
+from btfxwss import BtfxWss
 
 class GenericWebsocket(object):
   def __init__(self, host, onCandleHook=None, onTradeHook=None, onCompleteHook=None):
-    websocket.enableTrace(True)
-    self.ws = ws = websocket.WebSocketApp(
-      host,
-      on_message=self.on_message,
-      on_error=self.on_error,
-      on_close=self.on_close
-    )
-    ws.on_open = self.on_open
-    self.logger = CustomLogger('HFWebSocket', logLevel='INFO')
     if not onCandleHook:
       raise KeyError("Expected `onCandleHook` in parameters.")
     if not onTradeHook:
@@ -23,7 +16,8 @@ class GenericWebsocket(object):
     self.onCandleHook = onCandleHook
     self.onTradeHook = onTradeHook
     self.onCompleteHook = onCompleteHook
-    ws.run_forever()
+
+    self.logger = CustomLogger('HFWebSocket', logLevel='INFO')
   
   def on_error(self, error):
     self.logger.error(error)
@@ -38,6 +32,11 @@ class GenericWebsocket(object):
     pass
 
 class DataServerWebsocket(GenericWebsocket):
+  '''
+  Basic websocket client that simply reads data from the DataServer. This instance
+  of the websocket should only ever be used in backtest mode since it isnt capable
+  of handling orders.
+  '''
   WS_END = 'bt.end'
   WS_CANDLE = 'bt.candle'
   WS_TRADE = 'bt.trade'
@@ -47,6 +46,14 @@ class DataServerWebsocket(GenericWebsocket):
 
   def __init__(self, fromDate, toDate, symbol, syncTrades=True,  syncCandles=True, tf='1m',
       candleFields='*', tradeFields='*', syncMissing=True, host='ws://localhost:8899', *args, **kwargs):
+    websocket.enableTrace(True)
+    self.ws = ws = websocket.WebSocketApp(
+      host,
+      on_message=self.on_message,
+      on_error=self.on_error,
+      on_close=self.on_close
+    )
+    ws.on_open = self.on_open
     self.fromDate = fromDate
     self.toDate = toDate
     self.symbol = symbol
@@ -58,6 +65,7 @@ class DataServerWebsocket(GenericWebsocket):
     self.candleFields = candleFields
     self.tradeFields = tradeFields
     super(DataServerWebsocket, self).__init__(host,  *args, **kwargs)
+    self.ws.run_forever()
   
   def on_message(self, message):
     self.logger.debug(message)
@@ -98,8 +106,38 @@ class DataServerWebsocket(GenericWebsocket):
     self.onTradeHook(trade)
 
 class LiveBfxWebsocket(GenericWebsocket):
-  def __init__(self, host='wss://api.bitfinex.com/ws', *args, **kwargs):
+  '''
+  More complex websocket that heavily relies on the btfxwss module. This websocket requires
+  authentication and is capable of handling orders.
+  https://github.com/Crypto-toolbox/btfxwss
+  '''
+  def __init__(self, symbol, host='wss://api.bitfinex.com/ws', *args, **kwargs):
     super(LiveBfxWebsocket, self).__init__(host, *args, **kwargs)
+    wss = BtfxWss()
+    wss.start()
+
+    while not wss.conn.connected.is_set():
+      time.sleep(1)
+    
+    # Subscribe to some channels
+    wss.subscribe_to_ticker('BTCUSD')
+    wss.subscribe_to_candles('BTCUSD')
+    wss.subscribe_to_order_book('BTCUSD')
+
+    # Accessing data stored in BtfxWss:
+    while True:
+      tickers = wss.tickers('BTCUSD')
+      trades = wss.trades('BTCUSD')
+      candles = wss.candles('BTCUSD', '1m')
+      while not tickers.empty():
+        print ('Ticker')
+        print(tickers.get())
+      while not trades.empty():
+        print ('Trade')
+        print(trades.get())
+      while not candles.empty():
+        print ('Candles')
+        print(candles.get())
   
   def on_message(self, message):
     self.logger.debug(message)
