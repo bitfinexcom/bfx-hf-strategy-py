@@ -28,9 +28,9 @@ class OrderType(Enum):
   are possible.
   '''
   MARKET = 1
-  EXCHNAGE_MARKET = 2
+  EXCHANGE_MARKET = 2
   LIMIT = 3
-  EXCHNAGE_LIMIT = 4
+  EXCHANGE_LIMIT = 4
 
 class PositionManager(object):
 
@@ -54,12 +54,12 @@ class PositionManager(object):
   
   @logfunc
   def closePositionLimit(self, *args, **kwargs):
-    orderType = OrderType.LIMIT if hasattr(self, 'margin') else OrderType.EXCHNAGE_LIMIT
+    orderType = OrderType.LIMIT if hasattr(self, 'margin') else OrderType.EXCHANGE_LIMIT
     return self.closePosition(*args, **kwargs, type=orderType)
 
   @logfunc
   def closePositionMarket(self, *args, **kwargs):
-    orderType = OrderType.MARKET if hasattr(self, 'margin') else OrderType.EXCHNAGE_MARKET
+    orderType = OrderType.MARKET if hasattr(self, 'margin') else OrderType.EXCHANGE_MARKET
     return self.closePosition(*args, **kwargs, type=orderType)
 
   @logfunc
@@ -106,12 +106,12 @@ class PositionManager(object):
 
   @logfunc
   def openPositionLimit(self, *args, **kwargs):
-    orderType = OrderType.LIMIT if hasattr(self, 'margin') else OrderType.EXCHNAGE_LIMIT
+    orderType = OrderType.LIMIT if hasattr(self, 'margin') else OrderType.EXCHANGE_LIMIT
     return self.openPosition(type=orderType, *args, **kwargs)
 
   @logfunc
   def openPositionMarket(self, *args, **kwargs):
-    orderType = OrderType.MARKET if hasattr(self, 'margin') else OrderType.EXCHNAGE_MARKET
+    orderType = OrderType.MARKET if hasattr(self, 'margin') else OrderType.EXCHANGE_MARKET
     return self.openPosition(type=orderType, *args, **kwargs)
 
   @logfunc
@@ -175,22 +175,22 @@ class PositionManager(object):
 
   @logfunc
   def updateLongPositionLimit(self, *args, **kwargs):
-    orderType = OrderType.LIMIT if hasattr(self, 'margin') else OrderType.EXCHNAGE_LIMIT
+    orderType = OrderType.LIMIT if hasattr(self, 'margin') else OrderType.EXCHANGE_LIMIT
     return self.updatePosition(type=orderType, *args, **kwargs)
 
   @logfunc
   def updateLongPositionMarket(self, *args, **kwargs):
-    orderType = OrderType.MARKET if hasattr(self, 'margin') else OrderType.EXCHNAGE_MARKET
+    orderType = OrderType.MARKET if hasattr(self, 'margin') else OrderType.EXCHANGE_MARKET
     return self.updatePosition(type=orderType, *args, **kwargs)
 
   @logfunc
   def updatePositionLimit(self, *args, **kwargs):
-    orderType = OrderType.LIMIT if hasattr(self, 'margin') else OrderType.EXCHNAGE_LIMIT
+    orderType = OrderType.LIMIT if hasattr(self, 'margin') else OrderType.EXCHANGE_LIMIT
     return self.updatePosition(type=orderType, *args, **kwargs)
 
   @logfunc
   def updatePositionMarket(self, *args, **kwargs):
-    orderType = OrderType.MARKET if hasattr(self, 'margin') else OrderType.EXCHNAGE_MARKET
+    orderType = OrderType.MARKET if hasattr(self, 'margin') else OrderType.EXCHANGE_MARKET
     return self.updatePosition(type=orderType, *args, **kwargs)
 
   @logfunc
