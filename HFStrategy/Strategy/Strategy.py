@@ -1,27 +1,26 @@
 import logging
+import math
+import asyncio
 from threading import Thread
 
 from .PositionManager import PositionManager
 from .Position import Position
 from ..utils.CustomLogger import CustomLogger
-from .OrderManager import OrderManager
 
 def candleMarketDataKey(candle):
   return '%s-%s' % (candle['symbol'], candle['tf'])
 
 class Strategy(PositionManager):
-  def __init__(self, multiThreading=True, backtesting = False, symbol='tBTCUSD', logLevel='INFO'):
+  def __init__(self, backtesting = False, symbol='tBTCUSD', logLevel='INFO'):
     self.marketData = {}
     self.positions = {}
     self.lastPrice = {}
     self.closedPositions = []
     self.candlePrice = 'close'
     self.backtesting = backtesting
-    self.multiThreading = multiThreading
     self.symbol = symbol
     # initialise custom logger
     self.logger = CustomLogger('HFStrategy', logLevel=logLevel)
-    self.OrderManager = OrderManager(backtesting=backtesting, logLevel=logLevel)
     super(Strategy, self).__init__()
 
   def indicatorValues(self):
@@ -55,6 +54,11 @@ class Strategy(PositionManager):
       dk = i.get_data_key()
  
       if dt == '*' or dt == dataType:
+        t = type(data)
+        if t is float or t is int:
+          if math.isfinite(data):
+            i.update(data)
+            return
         if dk == '*':
           i.update(data)
         else:
@@ -91,32 +95,36 @@ class Strategy(PositionManager):
     self.closedPositions += [position]
     del self.positions[position.symbol]
 
-  def onCandle(self, candle):
+  async def onCandle(self, candle):
+    print ('On Candle')
+    print (candle)
     self.addIndicatorData('candle', candle)
     candle['iv'] = self.indicatorValues()
     self.addCandleData(candle)
 
     if self.indicatorsReady():
-      self._onPriceUpdate({
+      await self._onPriceUpdate({
         'mts': candle['mts'],
         'price': candle[self.candlePrice],
         'symbol': candle['symbol'],
         'candle': candle,
         'type': 'candle'
       })
-  
-  # Starts a thread with the given parameters
-  def _startNewThread(self, func):
-    ## multithreading makes backtesting unreliable
-    ## since the main thread will continue to process the
-    ## backtest data but the threads with orders may take longer
-    if not self.multiThreading:
-      # Run on mainthread
-      func(self)
-    else:
-      # Spawn seperate thread
-      t = Thread(target=func, args=(self,))
-      t.start()
+
+  async def onTrade(self, trade):
+    print ('On Trade')
+    print (trade)
+    price = trade['price']
+    self.updateIndicatorData('trade', price)
+
+    if self.indicatorsReady():
+      await self._onPriceUpdate({
+        'mts': trade['mts'],
+        'price': price,
+        'symbol': trade['symbol'],
+        'trade': trade,
+        'type': 'trade'
+      })
 
   def _onSeedCandle(self, candle):
     self.addIndicatorData('candle', candle)
@@ -143,47 +151,44 @@ class Strategy(PositionManager):
   def _onSeedTrade(self, trade):
     self.updateIndicatorData('trade', trade['price'])
 
-  def _onPriceUpdate(self, update):
+  async def _onPriceUpdate(self, update):
     symbol = update['symbol']
     self.lastPrice[symbol] = (update['price'], update['mts'])
     # TODO: Handle stops/targets
     if symbol not in self.positions:
-      self.onEnter(update)
+      await self.onEnter(update)
     else:
       symPosition = self.positions[symbol]
       amount = symPosition.amount
 
-      self.onUpdate(update)
+      await self.onUpdate(update)
 
       if amount > 0:
-        self.onUpdateLong(update)
+        await self.onUpdateLong(update)
       else:
-        self.onUpdateShort(update)
+        await self.onUpdateShort(update)
   
   ############################
   #      Function Hooks      #
   ############################
 
-  def onEnter(self, update):
+  async def onEnter(self, update):
     pass
 
-  def onUpdate(self, update):
+  async def onUpdate(self, update):
     pass
 
-  def onUpdateLong(self, update):
+  async def onUpdateLong(self, update):
     pass
 
-  def onUpdateShort(self, update):
+  async def onUpdateShort(self, update):
     pass
 
-  def onOrderFill(self, params):
-    pass
-
-  def onTrade(self, trade):
+  async def onOrderFill(self, params):
     pass
   
-  def onPositionUpdate(self, params):
+  async def onPositionUpdate(self, params):
     pass
 
-  def onPositionClose(self, params):
+  async def onPositionClose(self, params):
     pass

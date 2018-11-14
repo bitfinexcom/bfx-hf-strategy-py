@@ -1,3 +1,6 @@
 btfxwss==1.2.4
+eventemitter==0.2.0
 prettytable==0.7.2
-websocket-client==0.54.0
+asyncio==3.4.3
+websockets==7.0
+# websocket-client==0.54.0

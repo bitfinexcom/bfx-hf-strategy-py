@@ -6,10 +6,10 @@ from ..utils.CustomLogger import CustomLogger
 # Simple wrapper to log the calling of a function
 # to enable set the logger to debug mode
 def logfunc(func):
-    def wrapper(*args, **kwargs):
+    async def wrapper(*args, **kwargs):
       args[0].logger.debug("['{0}'] params: {1} kwargs: {2}".
                            format(func.__name__, args, kwargs))
-      return func(*args, **kwargs)
+      return await func(*args, **kwargs)
     return wrapper
 
 class PositionError(Exception):
@@ -39,31 +39,32 @@ class PositionManager(object):
   ############################
 
   @logfunc
-  def closePosition(self, *args, **kwargs):
-    self.closePositionWithOrder(*args, **kwargs)
+  async def closePosition(self, *args, **kwargs):
+    return await self.closePositionWithOrder(*args, **kwargs)
   
   @logfunc
-  def closeOpenPositions(self):
+  async def closeOpenPositions(self):
     openPositions = list(self.positions.values())
     count = len(openPositions)
+    # TODO batch close
     for pos in openPositions:
       price, mts = self.getLastPrice(pos.symbol)
-      self.closePositionMarket(
+      await self.closePositionMarket(
           symbol=pos.symbol, price=price, mtsCreate=mts, tag='Close all positions')
     self.logger.trade('CLOSED_ALL {} open positions.'.format(count))
   
   @logfunc
-  def closePositionLimit(self, *args, **kwargs):
+  async def closePositionLimit(self, *args, **kwargs):
     orderType = OrderType.LIMIT if hasattr(self, 'margin') else OrderType.EXCHANGE_LIMIT
-    return self.closePosition(*args, **kwargs, type=orderType)
+    return await self.closePosition(*args, **kwargs, type=orderType)
 
   @logfunc
-  def closePositionMarket(self, *args, **kwargs):
+  async def closePositionMarket(self, *args, **kwargs):
     orderType = OrderType.MARKET if hasattr(self, 'margin') else OrderType.EXCHANGE_MARKET
-    return self.closePosition(*args, **kwargs, type=orderType)
+    return await self.closePosition(*args, **kwargs, type=orderType)
 
   @logfunc
-  def closePositionWithOrder(self, price, mtsCreate, symbol=None, **kwargs):
+  async def closePositionWithOrder(self, price, mtsCreate, symbol=None, **kwargs):
     symbol = symbol or self.symbol
     position = self.getPosition(symbol)
   
@@ -71,130 +72,124 @@ class PositionManager(object):
       raise PositionError('No position exists for %s' % (symbol))
 
     amount = position.amount * -1
-    def submit(self):
-      order, trade = self.OrderManager.submitTrade(symbol, price, amount,
-          mtsCreate, **kwargs)
-      position.addTrade(trade)
-      position.close()
-      self.removePosition(position)
-      self.logger.info("Position closed:")
-      self.logger.trade("CLOSED " + str(trade))
-      self.onOrderFill({ trade: trade, order: order })
-      self.onTrade(trade)
-      self.onPositionClose({
-        'position': position,
-        'order': order,
-        'trade': trade
-      })
-    self._startNewThread(submit)
+
+    order, trade = await self.OrderManager.submitTrade(symbol, price, amount,
+        mtsCreate, **kwargs)
+    position.addTrade(trade)
+    position.close()
+    self.removePosition(position)
+    self.logger.info("Position closed:")
+    self.logger.trade("CLOSED " + str(trade))
+    await self.onOrderFill({ trade: trade, order: order })
+    await self.onPositionClose({
+      'position': position,
+      'order': order,
+      'trade': trade
+    })
 
   ###########################
   # Open Position functions #
   ###########################
 
   @logfunc
-  def openPosition(self, *args, **kwargs):
-    return self.openPositionWithOrder(*args, **kwargs)
+  async def openPosition(self, *args, **kwargs):
+    return await self.openPositionWithOrder(*args, **kwargs)
 
   @logfunc
-  def openShortPosition(self, amount, *args, **kwargs):
-    return self.openPosition(amount=-amount, *args, **kwargs)
+  async def openShortPosition(self, amount, *args, **kwargs):
+    return await self.openPosition(amount=-amount, *args, **kwargs)
 
   @logfunc
-  def openLongPosition(self, *args, **kwargs):
-    return self.openPosition(*args, **kwargs)
+  async def openLongPosition(self, *args, **kwargs):
+    return await self.openPosition(*args, **kwargs)
 
   @logfunc
-  def openPositionLimit(self, *args, **kwargs):
+  async def openPositionLimit(self, *args, **kwargs):
     orderType = OrderType.LIMIT if hasattr(self, 'margin') else OrderType.EXCHANGE_LIMIT
-    return self.openPosition(type=orderType, *args, **kwargs)
+    return await self.openPosition(type=orderType, *args, **kwargs)
 
   @logfunc
-  def openPositionMarket(self, *args, **kwargs):
+  async def openPositionMarket(self, *args, **kwargs):
     orderType = OrderType.MARKET if hasattr(self, 'margin') else OrderType.EXCHANGE_MARKET
-    return self.openPosition(type=orderType, *args, **kwargs)
+    return await self.openPosition(type=orderType, *args, **kwargs)
 
   @logfunc
-  def openPositionWithOrder(self, amount, price, mtsCreate, symbol=None, 
+  async def openPositionWithOrder(self, amount, price, mtsCreate, symbol=None, 
       stop=None, target=None, tag='', **kwargs):
     symbol = symbol or self.symbol
     # check for open positions
     if self.getPosition(symbol) != None:
       raise PositionError('A position already exists for %s' % (symbol))
 
-    # create submit functions so its easier to pass onto
-    # a new thread
-    def submit(self):
-      order, trade = self.OrderManager.submitTrade(symbol, price, amount,
-          mtsCreate, **kwargs)
-      position = Position(symbol, stop, target, tag)
-      position.addTrade(trade)
-      self.addPosition(position)
-      self.logger.info("New Position opened:")
-      self.logger.trade("OPENED " + str(trade))
-      self.onOrderFill({ trade: trade, order: order })
-      self.onTrade(trade)
-      self.onPositionUpdate({
-        'position': position,
-        'order': order,
-        'trade': trade
-      })
-    self._startNewThread(submit)
+    order, trade = await self.OrderManager.submitTrade(symbol, price, amount,
+        mtsCreate, **kwargs)
+    position = Position(symbol, stop, target, tag)
+    position.addTrade(trade)
+    self.addPosition(position)
+    self.logger.info("New Position opened:")
+    self.logger.trade("OPENED " + str(trade))
+    #TODO - batch these up
+    await self.onOrderFill({ trade: trade, order: order })
+    await self.onPositionUpdate({
+      'position': position,
+      'order': order,
+      'trade': trade
+    })
 
   @logfunc
-  def openShortPositionMarket(self, amount, *args, **kwargs):
-    return self.openPositionMarket(amount=-amount, *args, **kwargs)
+  async def openShortPositionMarket(self, amount, *args, **kwargs):
+    return await self.openPositionMarket(amount=-amount, *args, **kwargs)
 
   @logfunc
-  def openShortPositionLimit(self, amount, *args, **kwargs):
-    return self.openPositionMarket(amount=-amount, *args, **kwargs)
+  async def openShortPositionLimit(self, amount, *args, **kwargs):
+    return await self.openPositionMarket(amount=-amount, *args, **kwargs)
 
   @logfunc
-  def openLongPositionMarket(self, *args, **kwargs):
-    return self.openPositionMarket(*args, **kwargs)
+  async def openLongPositionMarket(self, *args, **kwargs):
+    return await self.openPositionMarket(*args, **kwargs)
 
   @logfunc
-  def openLongPositionLimit(self, *args, **kwargs):
-    return self.openPositionLimit(*args, **kwargs)
+  async def openLongPositionLimit(self, *args, **kwargs):
+    return await self.openPositionLimit(*args, **kwargs)
 
   #############################
   # Update Position functions #
   #############################
 
   @logfunc
-  def updatePosition(self, *args, **kwargs):
-    return self.updatePositionWithOrder(*args, **kwargs)
+  async def updatePosition(self, *args, **kwargs):
+    return await self.updatePositionWithOrder(*args, **kwargs)
 
   @logfunc
-  def updateShortPosition(self, amount, *args, **kwargs):
-    return self.updatePosition(amount=amount, *args, **kwargs)
+  async def updateShortPosition(self, amount, *args, **kwargs):
+    return await self.updatePosition(amount=amount, *args, **kwargs)
 
   @logfunc
-  def updateLongPosition(self, *args, **kwargs):
-    return self.updatePosition(*args, **kwargs)
+  async def updateLongPosition(self, *args, **kwargs):
+    return await self.updatePosition(*args, **kwargs)
 
   @logfunc
-  def updateLongPositionLimit(self, *args, **kwargs):
+  async def updateLongPositionLimit(self, *args, **kwargs):
     orderType = OrderType.LIMIT if hasattr(self, 'margin') else OrderType.EXCHANGE_LIMIT
-    return self.updatePosition(type=orderType, *args, **kwargs)
+    return await self.updatePosition(type=orderType, *args, **kwargs)
 
   @logfunc
-  def updateLongPositionMarket(self, *args, **kwargs):
+  async def updateLongPositionMarket(self, *args, **kwargs):
     orderType = OrderType.MARKET if hasattr(self, 'margin') else OrderType.EXCHANGE_MARKET
-    return self.updatePosition(type=orderType, *args, **kwargs)
+    return await self.updatePosition(type=orderType, *args, **kwargs)
 
   @logfunc
-  def updatePositionLimit(self, *args, **kwargs):
+  async def updatePositionLimit(self, *args, **kwargs):
     orderType = OrderType.LIMIT if hasattr(self, 'margin') else OrderType.EXCHANGE_LIMIT
-    return self.updatePosition(type=orderType, *args, **kwargs)
+    return await self.updatePosition(type=orderType, *args, **kwargs)
 
   @logfunc
-  def updatePositionMarket(self, *args, **kwargs):
+  async def updatePositionMarket(self, *args, **kwargs):
     orderType = OrderType.MARKET if hasattr(self, 'margin') else OrderType.EXCHANGE_MARKET
-    return self.updatePosition(type=orderType, *args, **kwargs)
+    return await self.updatePosition(type=orderType, *args, **kwargs)
 
   @logfunc
-  def updatePositionWithOrder(self, price, amount, mtsCreate, symbol=None, **kwargs):
+  async def updatePositionWithOrder(self, price, amount, mtsCreate, symbol=None, **kwargs):
     symbol = symbol or self.symbol
     position = self.getPosition(symbol)
 
@@ -202,28 +197,25 @@ class PositionManager(object):
     if self.getPosition(symbol) == None:
       raise PositionError('No position exists for %s' % (symbol))
 
-    def update(self):
-      order, trade = self.OrderManager.submitTrade(symbol, price, amount,
-          mtsCreate, tag='Update position' **kwargs)
-      position.addTrade(trade)
-      self.logger.info("Position updated:")
-      self.logger.trade("UPDATED POSITION " + str(trade))
-      self.onOrderFill({ trade: trade, order: order })
-      self.onTrade(trade)
-      self.onPositionUpdate({
-        'position': position,
-        'order': order,
-        'trade': trade
-      })
-    self._startNewThread(update)
+    order, trade = await self.OrderManager.submitTrade(symbol, price, amount,
+        mtsCreate, tag='Update position', ws=self.ws, **kwargs)
+    position.addTrade(trade)
+    self.logger.info("Position updated:")
+    self.logger.trade("UPDATED POSITION " + str(trade))
+    await self.onOrderFill({ trade: trade, order: order })
+    await self.onPositionUpdate({
+      'position': position,
+      'order': order,
+      'trade': trade
+    })
   
   @logfunc
-  def updateShortPositionLimit(self, amount, *args, **kwargs):
-    return self.updatePosition(amount=-amount, *args, **kwargs)
+  async def updateShortPositionLimit(self, amount, *args, **kwargs):
+    return await self.updatePosition(amount=-amount, *args, **kwargs)
   
   @logfunc
-  def updateShortPositionMarket(self, amount, *args, **kwargs):
-    return self.updatePosition(amount=-amount, *args, **kwargs)
+  async def updateShortPositionMarket(self, amount, *args, **kwargs):
+    return await self.updatePosition(amount=-amount, *args, **kwargs)
 
   ############################
   # Other Position functions #
