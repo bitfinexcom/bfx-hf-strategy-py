@@ -3,7 +3,7 @@ import asyncio
 
 from prettytable import PrettyTable
 from ..utils.CustomLogger import CustomLogger
-from bfxapi import LiveBfxWebsocket
+from bfxapi import Client
 from .DataServerWebsocket import DataServerWebsocket
 from ..Strategy.OrderManager import OrderManager
 import websockets
@@ -125,28 +125,26 @@ def backtestOffline(strategy, file=None, candles=None, tf='1hr'):
 
 def backtestLive(strategy):
   backtesting=True
-  ws = LiveBfxWebsocket(
-    API_KEY='',
-    API_SECRET='',
+  bfx = Client(
     backtest=backtesting
   )
-  ws.on('seed_candle', strategy._onSeedCandle)
-  ws.on('seed_trade', strategy._onSeedTrade)
-  ws.on('new_candle', strategy.onCandle)
-  ws.on('new_trade', strategy.onTrade)
-  strategy.OrderManager = OrderManager(ws, backtesting=backtesting, logLevel='INFO')
-  ws.run()
+  bfx.on('seed_candle', strategy._onSeedCandle)
+  bfx.on('seed_trade', strategy._onSeedTrade)
+  bfx.on('new_candle', strategy.onCandle)
+  bfx.on('new_trade', strategy.onTrade)
+  strategy.OrderManager = OrderManager(bfx.ws, backtesting=backtesting, logLevel='INFO')
+  bfx.run()
 
 def executeLive(strategy, API_KEY, API_SECRET):
   backtesting=False 
-  ws = LiveBfxWebsocket(
+  bfx = Client(
     API_KEY=API_KEY,
     API_SECRET=API_SECRET,
     backtest=backtesting
   )
-  ws.on('seed_candle', strategy._onSeedCandle)
-  ws.on('seed_trade', strategy._onSeedTrade)
-  ws.on('new_candle', strategy.onCandle)
-  ws.on('new_trade', strategy.onTrade)
-  strategy.OrderManager = OrderManager(ws, backtesting=backtesting, logLevel='INFO')
-  ws.run()
+  bfx.ws.on('seed_candle', strategy._onSeedCandle)
+  bfx.ws.on('seed_trade', strategy._onSeedTrade)
+  bfx.ws.on('new_candle', strategy.onCandle)
+  bfx.ws.on('new_trade', strategy.onTrade)
+  strategy.OrderManager = OrderManager(bfx.ws, backtesting=backtesting, logLevel='INFO')
+  bfx.ws.run()
