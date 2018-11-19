@@ -96,8 +96,6 @@ class Strategy(PositionManager):
     del self.positions[position.symbol]
 
   async def onCandle(self, candle):
-    print ('On Candle')
-    print (candle)
     self.addIndicatorData('candle', candle)
     candle['iv'] = self.indicatorValues()
     self.addCandleData(candle)
@@ -112,8 +110,6 @@ class Strategy(PositionManager):
       })
 
   async def onTrade(self, trade):
-    print ('On Trade')
-    print (trade)
     price = trade['price']
     self.updateIndicatorData('trade', price)
 
