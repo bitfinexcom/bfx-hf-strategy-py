@@ -117,25 +117,25 @@ async def onEnter(self, update):
 
 ## Managing positions
 
-The HFStrategy class exposes a bunch of asynchronouse methods to help open/close/update any positions:
+The HFStrategy class exposes a bunch of asynchronous methods to help open/close/update any positions:
 
-- `openLongPositionMarket(*args, **kwargs)`
-- `openLongPositionLimit(*args, **kwargs)`
-- `openLongPosition(*args, **kwargs)`
-- `openShortPositionMarket(*args, **kwargs)`
-- `openShortPositionLimit(*args, **kwargs)`
-- `openShortPosition(*args, **kwargs)`
-- `openPosition(*args, **kwargs)`
-- `updateLongPositionMarket(*args, **kwargs)`
-- `updateLongPositionLimit(*args, **kwargs)`
-- `updateLongPosition(*args, **kwargs)`
-- `updateShortPositionMarket(*args, **kwargs)`
-- `updateShortPositionLimit(*args, **kwargs)`
-- `updateShortPosition(*args, **kwargs)`
-- `updatePosition(*args, **kwargs)`
-- `closePositionMarket(*args, **kwargs)`
-- `closePositionLimit(*args, **kwargs)`
-- `closePosition(*args, **kwargs)`
+- `open_long_position_market(*args, **kwargs)`
+- `open_long_position_limit(*args, **kwargs)`
+- `open_long_position(*args, **kwargs)`
+- `open_short_position_market(*args, **kwargs)`
+- `open_short_position_limit(*args, **kwargs)`
+- `open_short_position(*args, **kwargs)`
+- `open_position(*args, **kwargs)`
+- `update_long_position_market(*args, **kwargs)`
+- `update_long_position_limit(*args, **kwargs)`
+- `update_long_position(*args, **kwargs)`
+- `update_short_position_market(*args, **kwargs)`
+- `update_short_position_limit(*args, **kwargs)`
+- `update_short_position(*args, **kwargs)`
+- `update_position(*args, **kwargs)`
+- `close_position_market(*args, **kwargs)`
+- `close_position_limit(*args, **kwargs)`
+- `close_position(*args, **kwargs)`
 
 The price and mtsCreate timestamp must both be provided to all update handlers, even those operating with MARKET orders, in order to record the price and timestamp during backtests. If these are not provided, backtests run via bfx-hf-backtest will fail.
 
