@@ -102,7 +102,7 @@ async def _process_candle_batch(strategy, candles):
   for c in candles:
     await strategy._process_new_candle(c)
   async def call_finish():
-    await strategy.closeOpenPositions()
+    await strategy.close_open_positions()
     _finish(strategy)
   # call via event emitter so it scheduled correctly
   strategy.on("done", call_finish)
