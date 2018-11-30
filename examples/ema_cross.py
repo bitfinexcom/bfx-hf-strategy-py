@@ -24,11 +24,12 @@ async def enter(update):
   l = iv['emaL']
   if emaS.crossed(l):
     if s > l:
-      await strategy.open_long_position_market(
-        mtsCreate=update.mts, price=update.price, amount=0.1)
+      await strategy.open_long_position_market(mtsCreate=update.mts, amount=0.1)
     else:
-      await strategy.open_short_position_market(
-        mtsCreate=update.mts, price=update.price, amount=0.1)
+      await strategy.open_short_position_market(mtsCreate=update.mts, amount=0.1)
+
+# or bind func to event directly
+# strategy.on_enter(enter)
 
 @strategy.on_update_short
 async def update_short(update):
@@ -36,8 +37,7 @@ async def update_short(update):
   s = iv['emaS']
   l = iv['emaL']
   if s > l:
-    await strategy.close_position_market(
-      price=update.price, mtsCreate=update.mts)
+    await strategy.close_position_market(mtsCreate=update.mts)
 
 @strategy.on_update_long
 async def update_long(update):
@@ -45,8 +45,7 @@ async def update_long(update):
   s = iv['emaS']
   l = iv['emaL']
   if s < l:
-    await strategy.close_position_market(
-      price=update.price, mtsCreate=update.mts)
+    await strategy.close_position_market(mtsCreate=update.mts)
 
 @strategy.on_error
 def log_error(error):
