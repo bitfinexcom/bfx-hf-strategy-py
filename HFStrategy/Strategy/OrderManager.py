@@ -8,7 +8,7 @@ def generate_fake_data(symbol, price, amount, mtsCreate, market_type, *args, **k
   d = [1, 2, 3, symbol, mtsCreate, mtsCreate, amount, amount, market_type, market_type,
       None, None, None, "EXECUTED @ {}({})".format(price, amount), None, None, price,
       price, 0, 0, None, None, None, 0, 0, None, None, None, "API>BFX", None, None, None]
-  order = Order(d)
+  order = Order(None, d)
   trade = Trade(order)
   return order, trade
 
