@@ -1,68 +1,60 @@
 import sys
 import logging
+import asyncio
 sys.path.append('../')
 
 from HFStrategy import Strategy
 from HFStrategy import PositionError
 from bfxhfindicators import EMA
 
-class EMAStrategy(Strategy):
-  indicators = {
+# Initialise strategy
+strategy = Strategy(
+  symbol='tBTCUSD',
+  indicators={
     'emaL': EMA([100]),
     'emaS': EMA([20])
   }
-
-  async def onEnter(self, update):
-    iv = self.indicatorValues()
-    emaS = self.indicators['emaS']
-
-    s = iv['emaS']
-    l = iv['emaL']
-    await self.openLongPositionMarket(
-        mtsCreate=update['mts'], price=update['price'], amount=1)
-    # if emaS.crossed(l):
-    #   if True:
-    #     if s > l:
-    #       try:
-    #         await self.openLongPositionMarket(
-    #             mtsCreate=update['mts'], price=update['price'], amount=1)
-    #       except PositionError as e:
-    #         logging.error(e)
-    #     else:
-    #       try:
-    #         await self.openShortPositionMarket(
-    #             mtsCreate=update['mts'], price=update['price'], amount=1)
-    #       except PositionError as e:
-    #         logging.error(e)
-
-  async def onUpdateShort(self, update):
-    iv = self.indicatorValues()
-    s = iv['emaS']
-    l = iv['emaL']
-    if s > l:
-      try:
-        await self.closePositionMarket(price=update['price'], mtsCreate=update['mts'])
-      except PositionError as e:
-        logging.error(e)
-
-  async def onUpdateLong(self, update):
-    iv = self.indicatorValues()
-    s = iv['emaS']
-    l = iv['emaL']
-    if s < l:
-      try:
-        await self.closePositionMarket(price=update['price'], mtsCreate=update['mts'], )
-      except PositionError as e:
-        logging.error(e)
-
-# Initialise strategy
-strategy = EMAStrategy(
-  symbol='tBTCUSD'
 )
 
+@strategy.on_enter
+async def enter(update):
+  iv = update.get_indicator_values()
+  emaS = strategy.get_indicators()['emaS']
+  s = iv['emaS']
+  l = iv['emaL']
+  if emaS.crossed(l):
+    if s > l:
+      await strategy.openLongPositionMarket(
+        mtsCreate=update.mts, price=update.price, amount=0.1)
+    else:
+      await strategy.openShortPositionMarket(
+        mtsCreate=update.mts, price=update.price, amount=0.1)
+
+@strategy.on_update_short
+async def update_short(update):
+  iv = update.get_indicator_values()
+  s = iv['emaS']
+  l = iv['emaL']
+  if s > l:
+    await strategy.closePositionMarket(
+      price=update.price, mtsCreate=update.mts)
+
+@strategy.on_update_long
+async def update_long(update):
+  iv = update.get_indicator_values()
+  s = iv['emaS']
+  l = iv['emaL']
+  if s < l:
+    await strategy.closePositionMarket(
+      price=update.price, mtsCreate=update.mts)
+
+@strategy.on_error
+def log_error(error):
+  print ("ERROR: {}".format(error))
+
 # Backtest offline
-# from HFStrategy import backtestOffline
-# backtestOffline(strategy, file='btc_candle_data.json', tf='1hr')
+from HFStrategy import backtestOffline
+backtestOffline(strategy, file='btc_candle_data.json', tf='1hr')
 
 # Backtest with data-backtest server
 # import time
@@ -72,10 +64,11 @@ strategy = EMAStrategy(
 # backtestWithDataServer(strategy, then, now)
 
 # Execute live
-from HFStrategy import executeLive
-API_KEY='UIHBTNmAnleuiZkYiQKzueDvYkHPlU9Rtb7wz1QQ3ff'
-API_SECRET='kzX7amS3bzl3VvXwte0w45CblcqUxH4MYNmlx31OyXj'
-executeLive(strategy, API_KEY, API_SECRET)
+# import os
+# from HFStrategy import executeLive
+# API_KEY=os.getenv("BFX_KEY")
+# API_SECRET=os.getenv("BFX_SECRET")
+# executeLive(strategy, API_KEY, API_SECRET)
 
 # Backtest live
 # from HFStrategy import backtestLive
