@@ -2,40 +2,41 @@ import logging
 import math
 import asyncio
 from threading import Thread
+from pyee import EventEmitter
 
 from .PositionManager import PositionManager
 from .Position import Position
 from ..utils.CustomLogger import CustomLogger
+from ..models import Events, PriceUpdate
 
 def candleMarketDataKey(candle):
   return '%s-%s' % (candle['symbol'], candle['tf'])
 
 class Strategy(PositionManager):
-  def __init__(self, backtesting = False, symbol='tBTCUSD', logLevel='INFO'):
+  def __init__(self, backtesting = False, symbol='tBTCUSD', indicators={}, logLevel='INFO'):
     self.marketData = {}
     self.positions = {}
     self.lastPrice = {}
     self.closedPositions = []
-    self.candlePrice = 'close'
+    self.indicators = indicators
+    self.candle_price_key = 'close'
     self.backtesting = backtesting
     self.symbol = symbol
+    self.events = EventEmitter(scheduler=asyncio.ensure_future)
     # initialise custom logger
     self.logger = CustomLogger('HFStrategy', logLevel=logLevel)
     super(Strategy, self).__init__()
 
-  def indicatorValues(self):
-    values = {}
-    for key in self.indicators:
-      values[key] = self.indicators[key].v()
-    return values
+  async def _emit(self, event, *args, **kwargs):
+    await self._execute_events(event, *args, **kwargs)
 
-  def indicatorsReady(self):
-    for key in self.indicators:
-      if not self.indicators[key].ready():
-        return False
-    return True
+  async def _execute_events(self, event, *args, **kwargs):
+    # get all coroutines that are listening to the event
+    listeners = self.events.listeners(event)
+    # execute them now to avoid pyee scheduling them
+    await asyncio.gather(*[f(*args, **kwargs) for f in listeners])
 
-  def addIndicatorData(self, dataType, data):
+  def _add_indicator_data(self, dataType, data):
     for key in self.indicators:
       i = self.indicators[key]
       dt = i.get_data_type()
@@ -47,7 +48,7 @@ class Strategy(PositionManager):
         else:
           i.add(data[dk])
 
-  def updateIndicatorData(self, dataType, data):
+  def _update_indicator_data(self, dataType, data):
     for key in self.indicators:
       i = self.indicators[key]
       dt = i.get_data_type()
@@ -64,127 +65,155 @@ class Strategy(PositionManager):
         else:
           i.update(data[dk])
 
-  def addCandleData(self, candle):
+  def _add_candle_data(self, candle):
     dataKey = candleMarketDataKey(candle)
-
     if dataKey in self.marketData:
       self.marketData[dataKey].append(candle)
     else:
       self.marketData[dataKey] = []
 
-  def updateCandleData(self, candle):
+  def _update_candle_data(self, candle):
     dataKey = candleMarketDataKey(candle)
-
     if dataKey in self.marketData:
       self.marketData[dataKey][-1] = candle
     else:
       self.marketData[dataKey] = [candle]
-  
-  def getLastPrice(self, symbol):
-    mtsPrice = self.lastPrice[symbol]
-    return mtsPrice[0], mtsPrice[1]
 
-  def getPosition(self, symbol):
+  #############################
+  #      Private events       #
+  #############################
+
+  async def _process_new_candle(self, candle):
+    self._add_indicator_data('candle', candle)
+
+    if self.is_indicators_ready():
+      price = candle[self.candle_price_key]
+      pu = PriceUpdate(
+        price, candle['symbol'], candle['mts'], PriceUpdate.CANDLE, candle=candle)
+      pu.set_indicator_values(self.get_indicator_values())
+      await self._process_price_update(pu)
+
+  async def _process_new_trade(self, trade):
+    price = trade['price']
+    self._update_indicator_data('trade', price)
+
+    if self.is_indicators_ready():
+      pu = PriceUpdate(
+        price, trade['symbol'], trade['mts'], PriceUpdate.TRADE, trade=trade)
+      pu.set_indicator_values(self.get_indicator_values())
+      await self._process_price_update(pu)
+
+  def _process_new_seed_candle(self, candle):
+    self._add_indicator_data('candle', candle)
+    candle['iv'] = self.get_indicator_values()
+    self._add_candle_data(candle)
+
+  def _process_new_seed_trade(self, trade):
+    self._update_indicator_data('trade', trade['price'])
+
+  async def _process_price_update(self, update):
+    self.lastPrice[update.symbol] = update
+    # TODO: Handle stops/targets
+    if update.symbol not in self.positions:
+      await self._execute_events(Events.ON_ENTER, update)
+    else:
+      symPosition = self.positions[update.symbol]
+      amount = symPosition.amount
+
+      await self._execute_events(Events.ON_UPDATE, update)
+
+      if amount > 0:
+        await self._execute_events(Events.ON_UPDATE_LONG, update)
+      else:
+        await self._execute_events(Events.ON_UPDATE_SHORT, update)
+
+  ############################
+  #      Public Functions    #
+  ############################
+
+  def get_last_price_update(self, symbol):
+    update = self.lastPrice[symbol]
+    return update
+
+  def get_position(self, symbol):
     return self.positions.get(symbol)
 
-  def addPosition(self, position):
+  def add_position(self, position):
     self.positions[position.symbol] = position
-  
-  def removePosition(self, position):
+
+  def remove_position(self, position):
     self.logger.debug("Archiving closed position {}".format(position))
     self.closedPositions += [position]
     del self.positions[position.symbol]
 
-  async def onCandle(self, candle):
-    self.addIndicatorData('candle', candle)
-    candle['iv'] = self.indicatorValues()
-    self.addCandleData(candle)
+  def get_indicator_values(self):
+    values = {}
+    for key in self.indicators:
+      values[key] = self.indicators[key].v()
+    return values
 
-    if self.indicatorsReady():
-      await self._onPriceUpdate({
-        'mts': candle['mts'],
-        'price': candle[self.candlePrice],
-        'symbol': candle['symbol'],
-        'candle': candle,
-        'type': 'candle'
-      })
+  def is_indicators_ready(self):
+    for key in self.indicators:
+      if not self.indicators[key].ready():
+        return False
+    return True
 
-  async def onTrade(self, trade):
-    price = trade['price']
-    self.updateIndicatorData('trade', price)
+  def on(self, event, func=None):
+    if not func:
+      return self.events.on(event)
+    self.events.on(event, func)
 
-    if self.indicatorsReady():
-      await self._onPriceUpdate({
-        'mts': trade['mts'],
-        'price': price,
-        'symbol': trade['symbol'],
-        'trade': trade,
-        'type': 'trade'
-      })
+  def once(self, event, func=None):
+    if not func:
+      return self.events.once(event)
+    self.events.once(event, func)
 
-  def _onSeedCandle(self, candle):
-    self.addIndicatorData('candle', candle)
-    candle['iv'] = self.indicatorValues()
-    self.addCandleData(candle)
+  def set_indicators(self, indicators):
+    self.indicators = indicators
 
-  def _onCandleUpdate(self, candle):
-    self.updateIndicatorData('candle', candle)
-    candle['iv'] = self.indicatorValues()
-    self.updateCandleData(candle)
-
-    if self.indicatorsReady():
-      self._onPriceUpdate({
-        'mts': candle['mts'],
-        'price': candle[self.candlePrice],
-        'symbol': candle['symbol'],
-        'candle': candle,
-        'type': 'candle'
-      })
-  
-  def _onSeedCandleUpdate(self, candle):
-    self.updateIndicatorData('candle', candle)
-
-  def _onSeedTrade(self, trade):
-    self.updateIndicatorData('trade', trade['price'])
-
-  async def _onPriceUpdate(self, update):
-    symbol = update['symbol']
-    self.lastPrice[symbol] = (update['price'], update['mts'])
-    # TODO: Handle stops/targets
-    if symbol not in self.positions:
-      await self.onEnter(update)
-    else:
-      symPosition = self.positions[symbol]
-      amount = symPosition.amount
-
-      await self.onUpdate(update)
-
-      if amount > 0:
-        await self.onUpdateLong(update)
-      else:
-        await self.onUpdateShort(update)
+  def get_indicators(self):
+    return self.indicators
   
   ############################
-  #      Function Hooks      #
+  #       Event Hooks        #
   ############################
 
-  async def onEnter(self, update):
-    pass
+  def on_error(self, func=None):
+    if not func:
+      return self.events.on(Events.ERROR)
+    self.events.on(Events.ERROR, func)
 
-  async def onUpdate(self, update):
-    pass
+  def on_enter(self, func=None):
+    if not func:
+      return self.events.on(Events.ON_ENTER)
+    self.events.on(Events.ON_ENTER, func)
 
-  async def onUpdateLong(self, update):
-    pass
+  def on_update(self, func=None):
+    if not func:
+      return self.events.on(Events.ON_UPDATE)
+    self.events.on(Events.ON_UPDATE, func)
 
-  async def onUpdateShort(self, update):
-    pass
+  def on_update_long(self, func=None):
+    if not func:
+      return self.events.on(Events.ON_UPDATE_LONG)
+    self.events.on(Events.ON_UPDATE_LONG, func)
 
-  async def onOrderFill(self, params):
-    pass
-  
-  async def onPositionUpdate(self, params):
-    pass
+  def on_update_short(self, func=None):
+    if not func:
+      return self.events.on(Events.ON_UPDATE_SHORT)
+    self.events.on(Events.ON_UPDATE_SHORT, func)
 
-  async def onPositionClose(self, params):
-    pass
+  def on_order_fill(self, func=None):
+    if not func:
+      return self.events.on(Events.ON_ORDER_FILL)
+    self.events.on(Events.ON_ORDER_FILL, func)
+
+  def on_position_update(self, func=None):
+    if not func:
+      return self.events.on(Events.ON_POSITION_UPDATE)
+    self.events.on(Events.ON_POSITION_UPDATE, func)
+
+  def on_position_close(self, func=None):
+    if not func:
+      return self.events.on(Events.ON_POSITION_CLOSE)
+    self.events.on(Events.ON_POSITION_CLOSE, func)

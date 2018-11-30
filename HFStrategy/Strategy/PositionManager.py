@@ -2,6 +2,7 @@ import logging
 from enum import Enum
 from .Position import Position
 from ..utils.CustomLogger import CustomLogger
+from ..models import Events
 
 # Simple wrapper to log the calling of a function
 # to enable set the logger to debug mode
@@ -43,9 +44,9 @@ class PositionManager(object):
     count = len(openPositions)
     # TODO batch close
     for pos in openPositions:
-      price, mts = self.getLastPrice(pos.symbol)
+      update = self.get_last_price_update(pos.symbol)
       await self.closePositionMarket(
-          symbol=pos.symbol, price=price, mtsCreate=mts, tag='Close all positions')
+          symbol=pos.symbol, price=update.price, mtsCreate=update.mts, tag='Close all positions')
     self.logger.trade('CLOSED_ALL {} open positions.'.format(count))
   
   @logfunc
@@ -62,7 +63,7 @@ class PositionManager(object):
   async def closePositionWithOrder(self, price, mtsCreate, symbol=None,
       market_type=None, **kwargs):
     symbol = symbol or self.symbol
-    position = self.getPosition(symbol)
+    position = self.get_position(symbol)
   
     if position == None:
       raise PositionError('No position exists for %s' % (symbol))
@@ -72,16 +73,15 @@ class PositionManager(object):
     async def callback(order, trade):
       position.addTrade(trade)
       position.close()
-      self.removePosition(position)
+      self.remove_position(position)
       self.logger.info("Position closed:")
       self.logger.trade("CLOSED " + str(trade))
-      await self.onOrderFill({ trade: trade, order: order })
-      await self.onPositionClose({
+      await self._emit(Events.ON_ORDER_FILL, { trade: trade, order: order })
+      await self._emit(Events.ON_POSITION_CLOSE, {
         'position': position,
         'order': order,
         'trade': trade
       })
-
     await self.OrderManager.submitTrade(symbol, price, amount,
       mtsCreate, market_type, onComplete=callback, **kwargs)
 
@@ -116,23 +116,22 @@ class PositionManager(object):
       stop=None, target=None, tag='', market_type=None, **kwargs):
     symbol = symbol or self.symbol
     # check for open positions
-    if self.getPosition(symbol) != None:
+    if self.get_position(symbol) != None:
       raise PositionError('A position already exists for %s' % (symbol))
 
     async def callback(order, trade):
       position = Position(symbol, stop, target, tag)
       position.addTrade(trade)
-      self.addPosition(position)
+      self.add_position(position)
       self.logger.info("New Position opened:")
       self.logger.trade("OPENED " + str(trade))
       #TODO - batch these up
-      await self.onOrderFill({ trade: trade, order: order })
-      await self.onPositionUpdate({
+      await self._emit(Events.ON_ORDER_FILL, { trade: trade, order: order })
+      await self._emit(Events.ON_POSITION_UPDATE, {
         'position': position,
         'order': order,
         'trade': trade
       })
-
     await self.OrderManager.submitTrade(symbol, price, amount,
         mtsCreate, market_type, onComplete=callback, **kwargs)
 
@@ -192,23 +191,22 @@ class PositionManager(object):
   async def updatePositionWithOrder(self, price, amount, mtsCreate, symbol=None,
       market_type=None, **kwargs):
     symbol = symbol or self.symbol
-    position = self.getPosition(symbol)
+    position = self.get_position(symbol)
 
     # check for open positions
-    if self.getPosition(symbol) == None:
+    if self.get_position(symbol) == None:
       raise PositionError('No position exists for %s' % (symbol))
 
     async def callback(order, trade):
       position.addTrade(trade)
       self.logger.info("Position updated:")
       self.logger.trade("UPDATED POSITION " + str(trade))
-      await self.onOrderFill({ trade: trade, order: order })
-      await self.onPositionUpdate({
+      await self._emit(Events.ON_ORDER_FILL, { trade: trade, order: order })
+      await self._emit(Event.ON_POSITION_UPDATE, {
         'position': position,
         'order': order,
         'trade': trade
       })
-
     await self.OrderManager.submitTrade(symbol, price, amount,
       mtsCreate, market_type, tag='Update position', onComplete=callback, **kwargs)
   
@@ -225,5 +223,5 @@ class PositionManager(object):
   ############################
 
   def setPositionStop(self, stop, symbol):
-    position = self.getPosition(symbol or self.symbol)
+    position = self.get_position(symbol or self.symbol)
     position.stop = stop
