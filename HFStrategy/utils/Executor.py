@@ -128,7 +128,11 @@ def backtestOffline(strategy, file=None, candles=None, tf='1hr'):
     raise KeyError("Expected either 'candles' or 'file' in parameters.")
 
 def _start_bfx_ws(strategy, API_KEY=None, API_SECRET=None):
-  bfx = Client(API_KEY, API_SECRET)
+  bfx = Client(
+    API_KEY,
+    API_SECRET,
+    manageOrderBooks=True
+  )
   async def subscribe():
     await bfx.ws.subscribe('candles', strategy.symbol, timeframe='1m')
     await bfx.ws.subscribe('trades', strategy.symbol)
