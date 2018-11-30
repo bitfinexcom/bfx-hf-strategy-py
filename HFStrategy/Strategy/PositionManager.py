@@ -46,18 +46,19 @@ class PositionManager(object):
     for pos in open_positions:
       update = self.get_last_price_update(pos.symbol)
       await self.close_position_market(
-          symbol=pos.symbol, price=update.price, mtsCreate=update.mts, tag='Close all positions')
+          symbol=pos.symbol, mtsCreate=update.mts, tag='Close all positions')
     self.logger.trade('CLOSED_ALL {} open positions.'.format(count))
   
   @logfunc
-  async def close_positionLimit(self, *args, **kwargs):
+  async def close_position_limit(self, *args, **kwargs):
     orderType = LIMIT if hasattr(self, 'margin') else EXCHANGE_LIMIT
     return await self.close_position(*args, **kwargs, market_type=orderType)
 
   @logfunc
   async def close_position_market(self, *args, **kwargs):
     orderType = MARKET if hasattr(self, 'margin') else EXCHANGE_MARKET
-    return await self.close_position(*args, **kwargs, market_type=orderType)
+    price = self._market_price()
+    return await self.close_position(*args, **kwargs, price=price, market_type=orderType)
 
   @logfunc
   async def close_position_with_order(self, price, mtsCreate, symbol=None,
@@ -109,7 +110,8 @@ class PositionManager(object):
   @logfunc
   async def open_position_market(self, *args, **kwargs):
     orderType = MARKET if hasattr(self, 'margin') else EXCHANGE_MARKET
-    return await self.open_position(market_type=orderType, *args, **kwargs)
+    price = self._market_price()
+    return await self.open_position(market_type=orderType, price=price, *args, **kwargs)
 
   @logfunc
   async def open_position_with_order(self, amount, price, mtsCreate, symbol=None, 
@@ -175,7 +177,8 @@ class PositionManager(object):
   @logfunc
   async def update_long_position_market(self, *args, **kwargs):
     orderType = MARKET if hasattr(self, 'margin') else EXCHANGE_MARKET
-    return await self.update_position(market_type=orderType, *args, **kwargs)
+    price = self._market_price()
+    return await self.update_position(market_type=orderType, price=price, *args, **kwargs)
 
   @logfunc
   async def update_position_limit(self, *args, **kwargs):
@@ -185,7 +188,8 @@ class PositionManager(object):
   @logfunc
   async def update_position_market(self, *args, **kwargs):
     orderType = MARKET if hasattr(self, 'margin') else EXCHANGE_MARKET
-    return await self.update_position(market_type=orderType, *args, **kwargs)
+    price = self._market_price()
+    return await self.update_position(market_type=orderType, price=price, *args, **kwargs)
 
   @logfunc
   async def update_position_with_order(self, price, amount, mtsCreate, symbol=None,
@@ -212,11 +216,11 @@ class PositionManager(object):
 
   @logfunc
   async def update_short_position_limit(self, amount, *args, **kwargs):
-    return await self.update_position(amount=-amount, *args, **kwargs)
+    return await self.update_position_limit(amount=-amount, *args, **kwargs)
 
   @logfunc
   async def update_short_position_market(self, amount, *args, **kwargs):
-    return await self.update_position(amount=-amount, *args, **kwargs)
+    return await self.update_position_market(amount=-amount, *args, **kwargs)
 
   ############################
   # Other Position functions #
@@ -225,3 +229,8 @@ class PositionManager(object):
   def setPositionStop(self, stop, symbol):
     position = self.get_position(symbol or self.symbol)
     position.stop = stop
+
+  def _market_price(self):
+    ## market price does not matter when submitting orders to bfx
+    ## but this helps the offline backtests stay in sync
+    return self.get_last_price_update(self.symbol).price
