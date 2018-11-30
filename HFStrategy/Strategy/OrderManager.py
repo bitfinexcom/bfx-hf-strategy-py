@@ -1,32 +1,41 @@
 import logging
 import time
 
-from .Order import Order
-from .Trade import Trade
 from ..utils.CustomLogger import CustomLogger
+from bfxapi.models import Order, Trade
+
+def generate_fake_data(symbol, price, amount, mtsCreate, market_type, *args, **kwargs):
+  d = [1, 2, 3, symbol, mtsCreate, mtsCreate, amount, amount, market_type, market_type,
+      None, None, None, "EXECUTED @ {}({})".format(price, amount), None, None, price,
+      price, 0, 0, None, None, None, 0, 0, None, None, None, "API>BFX", None, None, None]
+  order = Order(None, d)
+  trade = Trade(order)
+  return order, trade
 
 class OrderManager(object):
   ''' Handles raw orders and communication with the websocket '''
 
-  def __init__(self, backtesting=False, logLevel='INFO'):
-      self.logger = CustomLogger('HFOrderManager', logLevel=logLevel)
-      self.backtesting = backtesting
+  def __init__(self, ws, backtesting=False, logLevel='INFO'):
+    self.ws = ws
+    self.logger = CustomLogger('HFOrderManager', logLevel=logLevel)
+    self.backtesting = backtesting
 
-  def submitOrder(self, orderParams):
+  async def _submit_order(self, symbol, price, amount, mtsCreate,
+      market_type, *args, **kwargs):
     self.logger.info('Strategy in live mode, submitting order.')
-    pass
+    await self.ws.submit_order(symbol, price, amount, market_type, *args, **kwargs)
 
-  def _simulateOrderFill(self, symbol, price, amount, mtsCreate, **kwargs):
+  async def _simulate_order_fill(self, *args, onComplete=None, **kwargs):
     self.logger.info('Strategy in backtest mode, Simulating order fill.')
-    return Order(symbol, amount, price, mtsCreate)
+    order, trade = generate_fake_data(*args, **kwargs)
+    if onComplete:
+      await onComplete(order, trade)
+    
 
-  def submitTrade(self, *args, **kwargs):
+  async def submitTrade(self, *args, **kwargs):
     tag = kwargs.get('tag', '')
     if (self.backtesting):
-      order = self._simulateOrderFill(*args, **kwargs)
-      trade = Trade(order, tag=tag)
-      return order, trade
+      await self._simulate_order_fill(*args, **kwargs)
     else:
-      ## trade for real
-      return None, None
+      await self._submit_order(*args, **kwargs)
 
