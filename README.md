@@ -1,5 +1,5 @@
 
-```
+```python
 from HFStrategy import Strategy
 from bfxhfindicators import EMA
 
@@ -63,7 +63,7 @@ python3 ema_cross.py
 
 ## Defining a strategy
 To define a trading strategy, first we have to create a new object that implements the `HFStrategy` class. Then we need to decide on a set of indicators to use and bind them to the classes `indicators` variable. Strategies created with it can be used with bfx-hf-backtest or with the exec method to run on the live market. An example strategy follows below:
-```
+```python
 from HFStrategy import Strategy
 from bfxhfindicators import EMA
 
@@ -98,7 +98,7 @@ for candles, open, high, low, close, and vol are provided
 
 Strategy state is stored in the strategy object (`self`) and can be queried for historical candle data, indicators & indicator values, open positions, and previous strategy trades. For an example, see the EMA cross example `onEnter` handler below.
 
-```
+```python
 async def onEnter(self, update):
   iv = self.indicatorValues()
   emaS = self.indicators['emaS']
