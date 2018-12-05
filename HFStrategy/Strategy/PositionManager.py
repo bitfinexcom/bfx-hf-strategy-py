@@ -71,20 +71,16 @@ class PositionManager(object):
 
     amount = position.amount * -1
 
-    async def callback(order, trade):
-      position.addTrade(trade)
+    async def callback(order):
+      position.addOrder(order)
       position.close()
       self.remove_position(position)
       self.logger.info("Position closed:")
-      self.logger.trade("CLOSED " + str(trade))
-      await self._emit(Events.ON_ORDER_FILL, { trade: trade, order: order })
-      await self._emit(Events.ON_POSITION_CLOSE, {
-        'position': position,
-        'order': order,
-        'trade': trade
-      })
+      self.logger.trade("CLOSED " + str(order))
+      await self._emit(Events.ON_ORDER_FILL, order)
+      await self._emit(Events.ON_POSITION_CLOSE, position)
     await self.OrderManager.submitTrade(symbol, price, amount,
-      mtsCreate, market_type, onComplete=callback, **kwargs)
+      mtsCreate, market_type, onClose=callback, **kwargs)
 
   ###########################
   # Open Position functions #
@@ -121,21 +117,17 @@ class PositionManager(object):
     if self.get_position(symbol) != None:
       raise PositionError('A position already exists for %s' % (symbol))
 
-    async def callback(order, trade):
+    async def callback(order):
       position = Position(symbol, stop, target, tag)
-      position.addTrade(trade)
+      position.addOrder(order)
       self.add_position(position)
       self.logger.info("New Position opened:")
-      self.logger.trade("OPENED " + str(trade))
+      self.logger.trade("OPENED " + str(order))
       #TODO - batch these up
-      await self._emit(Events.ON_ORDER_FILL, { trade: trade, order: order })
-      await self._emit(Events.ON_POSITION_UPDATE, {
-        'position': position,
-        'order': order,
-        'trade': trade
-      })
+      await self._emit(Events.ON_ORDER_FILL, order)
+      await self._emit(Events.ON_POSITION_UPDATE, position)
     await self.OrderManager.submitTrade(symbol, price, amount,
-        mtsCreate, market_type, onComplete=callback, **kwargs)
+        mtsCreate, market_type, onClose=callback, **kwargs)
 
   @logfunc
   async def open_short_position_market(self, amount, *args, **kwargs):
@@ -201,18 +193,14 @@ class PositionManager(object):
     if self.get_position(symbol) == None:
       raise PositionError('No position exists for %s' % (symbol))
 
-    async def callback(order, trade):
-      position.addTrade(trade)
+    async def callback(order):
+      position.addOrder(order)
       self.logger.info("Position updated:")
-      self.logger.trade("UPDATED POSITION " + str(trade))
-      await self._emit(Events.ON_ORDER_FILL, { trade: trade, order: order })
-      await self._emit(Events.ON_POSITION_UPDATE, {
-        'position': position,
-        'order': order,
-        'trade': trade
-      })
+      self.logger.trade("UPDATED POSITION " + str(order))
+      await self._emit(Events.ON_ORDER_FILL, order)
+      await self._emit(Events.ON_POSITION_UPDATE, position)
     await self.OrderManager.submitTrade(symbol, price, amount,
-      mtsCreate, market_type, tag='Update position', onComplete=callback, **kwargs)
+      mtsCreate, market_type, tag='Update position', onClose=callback, **kwargs)
 
   @logfunc
   async def update_short_position_limit(self, amount, *args, **kwargs):

@@ -27,11 +27,12 @@ def _logTrades(positions):
   x.field_names = ["Date", "Symbol", "Direction", "Amount", "Price", "Fee", "P&L", "Label"]
 
   for pos in positions:
-    for i, t in enumerate(pos.trades):
-      lastItem = i+1 == len(pos.trades)
+    for i, o in enumerate(pos.orders):
+      lastItem = i+1 == len(pos.orders)
+      direction = "SHORT" if o.amount <0 else "LONG"
       pl = round(pos.netProfitLoss, 2)
-      x.add_row([t.date, pos.symbol, t.direction, abs(t.amount), round(t.price, 2),
-                round(t.fee, 2), pl if lastItem else 0, t.tag])
+      x.add_row([o.date, pos.symbol, direction, abs(o.amount), round(o.price, 2),
+                round(o.fee, 2), pl if lastItem else 0, ''])
   print(x)
 
 def _finish(strategy):
@@ -52,7 +53,7 @@ def _finish(strategy):
   for pos in positions:
     profitLoss += pos.profitLoss
     totalFees += pos.totalFees
-    totalTrades += len(pos.trades)
+    totalTrades += len(pos.orders)
     totalVolume += pos.volume
     if pos.netProfitLoss < 0:
       totalLossesCount += 1

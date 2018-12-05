@@ -8,9 +8,7 @@ def generate_fake_data(symbol, price, amount, mtsCreate, market_type, *args, **k
   d = [1, 2, 3, symbol, mtsCreate, mtsCreate, amount, amount, market_type, market_type,
       None, None, None, "EXECUTED @ {}({})".format(price, amount), None, None, price,
       price, 0, 0, None, None, None, 0, 0, None, None, None, "API>BFX", None, None, None]
-  order = Order(None, d)
-  trade = Trade(order)
-  return order, trade
+  return Order.from_raw_ws_order(d)
 
 class OrderManager(object):
   ''' Handles raw orders and communication with the websocket '''
@@ -25,11 +23,11 @@ class OrderManager(object):
     self.logger.info('Strategy in live mode, submitting order.')
     await self.ws.submit_order(symbol, price, amount, market_type, *args, **kwargs)
 
-  async def _simulate_order_fill(self, *args, onComplete=None, **kwargs):
+  async def _simulate_order_fill(self, *args, onClose=None, **kwargs):
     self.logger.info('Strategy in backtest mode, Simulating order fill.')
-    order, trade = generate_fake_data(*args, **kwargs)
-    if onComplete:
-      await onComplete(order, trade)
+    order = generate_fake_data(*args, **kwargs)
+    if onClose:
+      await onClose(order)
     
 
   async def submitTrade(self, *args, **kwargs):

@@ -14,28 +14,29 @@ class Position:
     self.amount = 0
     self.totalFees = 0
     self.volume = 0
-    self.trades = []
+    self.orders = []
 
     self._isOpen = True
 
-  def addTrade(self, trade):
-    tradeNV = trade.amount * trade.price
-    totalAmount = self.amount + trade.amount
+  def addOrder(self, order):
+    orderNV = order.amount * order.priceAvg
+    totalAmount = self.amount + order.amount
     posNV = self.amount * self.price
+    fee = (order.priceAvg * abs(order.amount)) * 0.002
 
-    self.trades += [trade]
-    self.totalFees += trade.fee
-    self.volume += abs(tradeNV)
+    self.orders += [order]
+    self.totalFees += fee
+    self.volume += abs(orderNV)
 
-    if trade.amount < 0:
-      self.profitLoss = abs(tradeNV) - abs(posNV)
+    if order.amount < 0:
+      self.profitLoss = abs(orderNV) - abs(posNV)
     else:
-      self.profitLoss = abs(posNV) - abs(tradeNV)
+      self.profitLoss = abs(posNV) - abs(orderNV)
     self.netProfitLoss = self.profitLoss - self.totalFees
 
-    if len(self.trades) == 0:
-      self.amount = trade.amount
-      self.price = trade.price
+    if len(self.orders) == 0:
+      self.amount = order.amount
+      self.price = order.price
       return
 
     if totalAmount == 0:
@@ -43,8 +44,8 @@ class Position:
       self.amount = 0
       return
 
-    self.price = (posNV + tradeNV) / totalAmount
-    self.amount += trade.amount
+    self.price = (posNV + orderNV) / totalAmount
+    self.amount += order.amount
 
   def close(self):
     self._isOpen = False
@@ -63,6 +64,6 @@ class Position:
     if self.tag:
       mainStr += " tag={}".format(self.tag)
     # format trades into string
-    mainStr += " tradeCount={} isOpen={}>".format(len(self.trades), self._isOpen)
+    mainStr += " ordersCount={} isOpen={}>".format(len(self.orders), self._isOpen)
     return mainStr
 
