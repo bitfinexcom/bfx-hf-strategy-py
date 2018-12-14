@@ -7,3 +7,5 @@ class Events:
   ON_ORDER_FILL = 'on_order_fill'
   ON_POSITION_UPDATE = 'on_position_update'
   ON_POSITION_CLOSE = 'on_position_close'
+  ON_POSITION_STOP_REACHED = 'on_position_stop_reached'
+  ON_POSITION_TARGET_REACHED = 'on_position_target_reached'

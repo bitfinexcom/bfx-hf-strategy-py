@@ -12,8 +12,16 @@ from ..models import Events, PriceUpdate
 def candleMarketDataKey(candle):
   return '%s-%s' % (candle['symbol'], candle['tf'])
 
+class ExchangeType:
+  EXCHANGE = 'EXCHANGE'
+  MARGIN = 'MARGIN'
+
 class Strategy(PositionManager):
-  def __init__(self, backtesting = False, symbol='tBTCUSD', indicators={}, logLevel='INFO'):
+  ExchangeType = ExchangeType()
+
+  def __init__(self, backtesting=False, symbol='tBTCUSD', indicators={}, logLevel='INFO',
+      exchange_type=ExchangeType.EXCHANGE):
+    self.exchange_type = exchange_type
     self.marketData = {}
     self.positions = {}
     self.lastPrice = {}
@@ -24,6 +32,7 @@ class Strategy(PositionManager):
     self.symbol = symbol
     self.events = EventEmitter(scheduler=asyncio.ensure_future)
     # initialise custom logger
+    self.logLevel = logLevel
     self.logger = CustomLogger('HFStrategy', logLevel=logLevel)
     super(Strategy, self).__init__()
 
@@ -122,29 +131,58 @@ class Strategy(PositionManager):
 
       await self._execute_events(Events.ON_UPDATE, update)
 
+      # Check if stop or target price has been reached
+      if symPosition.has_reached_stop(update):
+        self.logger.info("Stop price reached for position: {}".format(symPosition))
+        if symPosition.exit_order.is_target_market():
+          await self.close_position_market(
+            mtsCreate=update.mts, tag="Stop price reached")
+          return await self._execute_events(
+            Events.ON_POSITION_STOP_REACHED, update, symPosition)
+      if symPosition.has_reached_target(update):
+        self.logger.info("Target price reached for position: {}".format(symPosition))
+        if symPosition.exit_order.is_stop_market():
+          await self.close_position_market(
+            mtsCreate=update.mts, tag="Target price reached")
+          return await self._execute_events(
+            Events.ON_POSITION_TARGET_REACHED, update, symPosition)
+
       if amount > 0:
         await self._execute_events(Events.ON_UPDATE_LONG, update)
       else:
         await self._execute_events(Events.ON_UPDATE_SHORT, update)
+
+  def _add_position(self, position):
+    self.positions[position.symbol] = position
+
+  def _remove_position(self, position):
+    self.logger.debug("Archiving closed position {}".format(position))
+    self.closedPositions += [position]
+    del self.positions[position.symbol]
 
   ############################
   #      Public Functions    #
   ############################
 
   def get_last_price_update(self, symbol):
+    """
+    Get the last received price update
+
+    @param symbol: string currency pair i.e 'tBTCUSD'
+    @return PriceUpdate
+    """
     update = self.lastPrice[symbol]
     return update
 
   def get_position(self, symbol):
+    """
+    Get the position of the given symbol. If it is not open then
+    return None
+
+    @param symbol: string currency pair i.e 'tBTCUSD'
+    @return Position
+    """
     return self.positions.get(symbol)
-
-  def add_position(self, position):
-    self.positions[position.symbol] = position
-
-  def remove_position(self, position):
-    self.logger.debug("Archiving closed position {}".format(position))
-    self.closedPositions += [position]
-    del self.positions[position.symbol]
 
   def get_indicator_values(self):
     values = {}
@@ -159,61 +197,197 @@ class Strategy(PositionManager):
     return True
 
   def on(self, event, func=None):
+    """
+    Subscribe to the given event
+
+    func can be either an asyncio coroutine or a function.
+
+    @param event: string event name
+    @param func: called when event name emitted
+    """
     if not func:
       return self.events.on(event)
     self.events.on(event, func)
 
   def once(self, event, func=None):
+    """
+    Subscribe to the given event but only fire once.
+    func can be either an asyncio coroutine or a function
+
+    @param event: string event name
+    @param func: called when event name emitted
+    """
     if not func:
       return self.events.once(event)
     self.events.once(event, func)
 
-  def set_indicators(self, indicators):
-    self.indicators = indicators
-
   def get_indicators(self):
+    """
+    Get all indicatios
+  
+    @return dict
+    """
     return self.indicators
+
+  def is_backtesting(self):
+    """
+    Get the mode of the strategy.
+
+    @return True if in backtesting mode
+    """
+    return self.backtesting
   
   ############################
   #       Event Hooks        #
   ############################
 
   def on_error(self, func=None):
+    """
+    Subscribe to the on error event
+
+    This event is fired whenever an error occurs from either the websocket
+    or the strategy class.
+    func can be either an asyncio coroutine or a function.
+
+    @event Exception
+    @param func: called when an error is emitted
+    """
     if not func:
       return self.events.on(Events.ERROR)
     self.events.on(Events.ERROR, func)
 
   def on_enter(self, func=None):
+    """
+    Subscribe to the on enter event
+
+    This event is fired whenever a price update is received but there are
+    no open positions. Once a position is opened then this event will
+    stop being called once again until all positions are closed.
+    func can be either an asyncio coroutine or a function.
+
+    @event PriceUpdate
+    @param func: called when a price update is emitted
+    """
     if not func:
       return self.events.on(Events.ON_ENTER)
     self.events.on(Events.ON_ENTER, func)
 
   def on_update(self, func=None):
+    """
+    Subscribe to the on update event
+
+    This event is fired whenever a price update is received.
+    func can be either an asyncio coroutine or a function.
+
+    @event PriceUpdate
+    @param func: called when update event emitted
+    """
     if not func:
       return self.events.on(Events.ON_UPDATE)
     self.events.on(Events.ON_UPDATE, func)
 
   def on_update_long(self, func=None):
+    """
+    Subscribe to the on update long event
+
+    This event fires whenever there is a price update and
+    there is an open long position.
+    func can be either an asyncio coroutine or a function.
+
+    @event PriceUpdate
+    @param func: called when update long emitted
+    """
     if not func:
       return self.events.on(Events.ON_UPDATE_LONG)
     self.events.on(Events.ON_UPDATE_LONG, func)
 
   def on_update_short(self, func=None):
+    """
+    Subscribe to the on update short event
+
+    This event fires whenever there is a price update and there
+    is an open short position.
+    func can be either an asyncio coroutine or a function.
+
+    @event PriceUpdate
+    @param func: called when update short emitted 
+    """
     if not func:
       return self.events.on(Events.ON_UPDATE_SHORT)
     self.events.on(Events.ON_UPDATE_SHORT, func)
 
   def on_order_fill(self, func=None):
+    """
+    Subscribe to the on order fill event
+
+    This event firest whenever a submitted order has been filled.
+    func can be either an asyncio coroutine or a function.
+
+    @event PriceUpdate
+    @param func: called when order fill emitted
+    """
     if not func:
       return self.events.on(Events.ON_ORDER_FILL)
     self.events.on(Events.ON_ORDER_FILL, func)
 
   def on_position_update(self, func=None):
+    """
+    Subscribe to the on position update event
+
+    This event fired whenever the position is updated with a new order.
+    func can be either an asyncio coroutine or a function.
+
+    @event Position
+    @param func: called when position update emitted
+    """
     if not func:
       return self.events.on(Events.ON_POSITION_UPDATE)
     self.events.on(Events.ON_POSITION_UPDATE, func)
 
   def on_position_close(self, func=None):
+    """
+    Subscribe to the on position close event
+
+    This event is fired whenever an open position is closed.
+    func can be either an asyncio coroutine or a function.
+
+    @event Position
+    @param func: called when position close emitted
+    """
     if not func:
       return self.events.on(Events.ON_POSITION_CLOSE)
     self.events.on(Events.ON_POSITION_CLOSE, func)
+
+  def on_position_stop_reached(self, func=None):
+    """
+    Subscribe to the on position stop reached event
+
+    This event is fired whenever an open position reaches its
+    specified stop price. Please be aware that the closing of
+    the position will have already been handled at the time of the event
+    being fired.
+    func can be either an asyncio coroutine or a function.
+
+    @event PriceUpdate, Position
+    @param func: called when position stop reached emitted
+    """
+    if not func:
+      return self.events.on(Events.ON_POSITION_STOP_REACHED)
+    self.events.on(Events.ON_POSITION_STOP_REACHED, func)
+
+  def on_position_target_reached(self, func=None):
+    """
+    Subscribe to the on position target reached event
+
+    This event is fired whenever an open position reaches its
+    specified target price. Please be aware that the closing of
+    the position will have already been handled at the time of the event
+    being fired.
+    func can be either an asyncio coroutine or a function.
+
+    @event PriceUpdate, Position
+    @param func: called when position target reached emitted
+    """
+    if not func:
+      return self.events.on(Events.ON_POSITION_TARGET_REACHED)
+    self.events.on(Events.ON_POSITION_TARGET_REACHED, func)
