@@ -1,12 +1,14 @@
 import json
 import asyncio
+import websockets
 
 from prettytable import PrettyTable
-from ..utils.CustomLogger import CustomLogger
 from bfxapi import Client
+
+from ..utils.CustomLogger import CustomLogger
+from ..utils.MockWebsocketClient import MockClient
 from .DataServerWebsocket import DataServerWebsocket
 from ..Strategy.OrderManager import OrderManager
-import websockets
 
 logger = CustomLogger('HFExecutor', logLevel='INFO')
 
@@ -27,12 +29,12 @@ def _logTrades(positions):
   x.field_names = ["Date", "Symbol", "Direction", "Amount", "Price", "Fee", "P&L", "Label"]
 
   for pos in positions:
-    for i, o in enumerate(pos.orders):
+    for i, o in enumerate(list(pos.orders.values())):
       lastItem = i+1 == len(pos.orders)
       direction = "SHORT" if o.amount <0 else "LONG"
       pl = round(pos.netProfitLoss, 2)
       x.add_row([o.date, pos.symbol, direction, abs(o.amount), round(o.price, 2),
-                round(o.fee, 2), pl if lastItem else 0, ''])
+                round(o.fee, 2), pl if lastItem else 0, o.tag])
   print(x)
 
 def _finish(strategy):
@@ -94,7 +96,8 @@ def backtestWithDataServer(strategy, fromDate, toDate, trades=True, candles=True
     ws.on('done', end)
     ws.on('new_candle', strategy._process_new_candle)
     ws.on('new_trade', strategy._process_new_trade)
-    strategy.OrderManager = OrderManager(ws, backtesting=True, logLevel='INFO')
+    strategy.orderManager = OrderManager(ws, backtesting=True, logLevel='INFO')
+    strategy.backtesting = True
     strategy.ws.run(fromDate, toDate, trades, candles, tf, candleFields, tradeFields, sync)
   except websockets.ConnectionClosed:
       pass 
@@ -110,7 +113,10 @@ async def _process_candle_batch(strategy, candles):
   await strategy._emit("done")
 
 def backtestOffline(strategy, file=None, candles=None, tf='1hr'):
-  strategy.OrderManager = OrderManager(None, backtesting=True, logLevel='INFO')
+  bfx = MockClient()
+  bfxOrderManager = OrderManager(bfx, backtesting=True, logLevel='INFO')
+  strategy.set_order_manager(bfxOrderManager)
+  strategy.backtesting = True
   if candles:
     return strategy._executeWithCandles(candles)
   elif file:
@@ -128,20 +134,30 @@ def backtestOffline(strategy, file=None, candles=None, tf='1hr'):
   else:
     raise KeyError("Expected either 'candles' or 'file' in parameters.")
 
-def _start_bfx_ws(strategy, API_KEY=None, API_SECRET=None):
+def _start_bfx_ws(strategy, API_KEY=None, API_SECRET=None, backtesting=False):
   bfx = Client(
     API_KEY,
     API_SECRET,
-    manageOrderBooks=True
+    manageOrderBooks=True, # verify orderbook locally
+    dead_man_switch=True, # Kill all orders on disconnect
+    ws_host='wss://test.bitfinex.com/ws/2',
+    logLevel=strategy.logLevel
   )
+  bfxOrderManager = OrderManager(bfx, backtesting=backtesting, logLevel=strategy.logLevel)
+  strategy.set_order_manager(bfxOrderManager)
+  # Start seeding cancles
+  t = asyncio.ensure_future(_seed_candles(strategy, bfx))
+  asyncio.get_event_loop().run_until_complete(t)
   async def subscribe():
     await bfx.ws.subscribe('candles', strategy.symbol, timeframe='1m')
     await bfx.ws.subscribe('trades', strategy.symbol)
     await bfx.ws.subscribe('book', strategy.symbol)
+  # bind events
   bfx.ws.on('connected', subscribe)
   bfx.ws.on('new_candle', strategy._process_new_candle)
   bfx.ws.on('new_trade', strategy._process_new_trade)
-  bfx.ws.run()
+  # bfx.ws.run()
+  return bfx
 
 async def _seed_candles(strategy, bfxapi):
   seed_candles = await bfxapi.rest.get_seed_candles(strategy.symbol)
@@ -154,21 +170,9 @@ async def _seed_candles(strategy, bfxapi):
 
 def backtestLive(strategy):
   backtesting=True
-  bfx = Client()
-  strategy.OrderManager = OrderManager(bfx.ws, backtesting=backtesting, logLevel='INFO')
-  t = asyncio.ensure_future(_seed_candles(strategy, bfx))
-  asyncio.get_event_loop().run_until_complete(t)
-  _start_bfx_ws(strategy)
+  strategy.backtesting = True
+  return _start_bfx_ws(strategy, backtesting=backtesting)
 
 def executeLive(strategy, API_KEY, API_SECRET):
-  backtesting=False 
-  bfx = Client(
-    API_KEY=API_KEY,
-    API_SECRET=API_SECRET
-  )
-  strategy.OrderManager = OrderManager(bfx.ws, backtesting=backtesting, logLevel='INFO')
-  t = asyncio.ensure_future(_seed_candles(strategy, bfx))
-  asyncio.get_event_loop().run_until_complete(t)
-  bfx.ws.run()
-  bfx.ws.on('new_candle', strategy._process_new_candle)
-  bfx.ws.on('new_trade', strategy._process_new_trade)
+  backtesting=False
+  return _start_bfx_ws(strategy, API_KEY, API_SECRET, backtesting)
