@@ -13,10 +13,31 @@ def candleMarketDataKey(candle):
   return '%s-%s' % (candle['symbol'], candle['tf'])
 
 class ExchangeType:
+  """ The type of exchange to operate on """
   EXCHANGE = 'EXCHANGE'
   MARGIN = 'MARGIN'
 
 class Strategy(PositionManager):
+  """
+  This class is the base of the HF framework and is used to help easily maintain
+  position on the market. This class also exposes function from the PositionManager
+  which are used to open/update/close orders. An event emitter is available which triggers
+  on price updates and positions updates, here is a full list of the available events:
+
+  *Note: price udates occur whenever that is a new candle or a new public trade has been
+  matched on the orderbook
+
+  @event on_error: an error has occured
+  @event on_enter: there is no open position and the price is updated
+  @event on_update: there is a price update
+  @event on_update_long: you have a long position open and the price has been updated
+  @event on_update_short: you have a short position open and the price has been updated
+  @event on_order_fill: a new order is filled
+  @event on_position_updated: you have a position open and the price has been updated
+  @event on_position_close: you had a position open and it has now been closed
+  @event on_position_stop_reached: your open position has just reached its stop price
+  @event on_position_target_reached: your open position has just reached its target price
+  """
   ExchangeType = ExchangeType()
 
   def __init__(self, backtesting=False, symbol='tBTCUSD', indicators={}, logLevel='INFO',

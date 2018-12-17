@@ -1,6 +1,6 @@
 
 ```python
-from HFStrategy import Strategy
+from hfstrategy import Strategy
 from bfxhfindicators import EMA
 
 class EMAStrategy(Strategy):
@@ -26,9 +26,9 @@ class EMAStrategy(Strategy):
 
 ### Execute
 
-```
+```python
 import os
-from HFStrategy import executeLive
+from hfstrategy import executeLive
 executeLive(strategy, os.getenv("BFX_KEY"), os.getenv("BFX_SECRET"))
 ```
 
@@ -62,9 +62,9 @@ python3 ema_cross.py
 # Quickstart
 
 ## Defining a strategy
-To define a trading strategy, first we have to create a new object that implements the `HFStrategy` class. Then we need to decide on a set of indicators to use and bind them to the classes `indicators` variable. Strategies created with it can be used with bfx-hf-backtest or with the exec method to run on the live market. An example strategy follows below:
+To define a trading strategy, first we have to create a new object that implements the `hfstrategy` class. Then we need to decide on a set of indicators to use and bind them to the classes `indicators` variable. Strategies created with it can be used with bfx-hf-backtest or with the exec method to run on the live market. An example strategy follows below:
 ```python
-from HFStrategy import Strategy
+from hfstrategy import Strategy
 from bfxhfindicators import EMA
 
 class EMAStrategy(Strategy):
@@ -117,7 +117,7 @@ async def onEnter(self, update):
 
 ## Managing positions
 
-The HFStrategy class exposes a bunch of asynchronous methods to help open/close/update any positions:
+The hfstrategy class exposes a bunch of asynchronous methods to help open/close/update any positions:
 
 - `open_long_position_market(*args, **kwargs)`
 - `open_long_position_limit(*args, **kwargs)`

@@ -1,4 +1,10 @@
-class Events:
+"""
+Enum Events to help type all of the different events
+that can be emitted by the Strategy class
+"""
+
+class Events(object):
+  """ Contains a list of the available event types """
   ERROR = 'error'
   ON_ENTER = 'on_enter'
   ON_UPDATE = 'on_update'
