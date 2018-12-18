@@ -3,7 +3,7 @@ The price update class is used to represent and update in price and contains
 data such as indicator values and the price.
 """
 
-class PriceUpdate(object):
+class PriceUpdate:
   """
   Price update object contains data related to the current price
   """

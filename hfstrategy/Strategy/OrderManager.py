@@ -4,9 +4,9 @@ import time
 from ..utils.CustomLogger import CustomLogger
 from bfxapi.models import Order, Trade
 
-def generate_fake_data(symbol, price, amount, mtsCreate, market_type, *args, **kwargs):
+def generate_fake_data(symbol, price, amount, mts_create, market_type, *args, **kwargs):
   order_id = int(round(time.time() * 1000))
-  d = [order_id, 2, 3, symbol, mtsCreate, mtsCreate, 0, amount, market_type, market_type,
+  d = [order_id, 2, 3, symbol, mts_create, mts_create, 0, amount, market_type, market_type,
       None, None, None, "EXECUTED @ {}({})".format(price, amount), None, None, price,
       price, 0, 0, None, None, None, 0, 0, None, None, None, "API>BFX", None, None, None]
   return Order.from_raw_order(d)

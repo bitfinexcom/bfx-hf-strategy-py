@@ -109,7 +109,7 @@ class Position(object):
 
   def _update_with_order(self, order):
     old_order = self.orders[order.id]
-    if order.mtsUpdate < old_order.mtsUpdate:
+    if order.mts_update < old_order.mts_update:
       # order is older then existing
       return
     # otherwise replace order with newest
@@ -127,8 +127,8 @@ class Position(object):
     profit_loss = 0
     for order in list(self.orders.values()):
       # get filled amount
-      o_amount = order.amountOrig - order.amount
-      order_nv = o_amount * order.priceAvg
+      o_amount = order.amount_orig - order.amount
+      order_nv = o_amount * order.price_avg
       fee = order.fee
       total_fees += fee
       volume += abs(order_nv)
@@ -155,10 +155,10 @@ class Position(object):
     self.netProfitLoss = profit_loss - total_fees
 
   def add_order(self, order):
-    orderNV = order.amount * order.priceAvg
+    orderNV = order.amount * order.price_vg
     totalAmount = self.amount + order.amount
     posNV = self.amount * self.price
-    fee = (order.priceAvg * abs(order.amount)) * 0.002
+    fee = (order.price_avg * abs(order.amount)) * 0.002
 
     self.orders += [order]
     self.totalFees += fee
