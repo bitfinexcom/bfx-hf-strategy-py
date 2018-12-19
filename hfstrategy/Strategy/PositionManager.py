@@ -84,6 +84,7 @@ class PositionManager(object):
       self._remove_position(position)
       self.logger.info("Position closed:")
       self.logger.trade("CLOSED " + str(order))
+      self.logger.position(position)
       await self._emit(Events.ON_ORDER_FILL, order)
       await self._emit(Events.ON_POSITION_CLOSE, position)
     else:
@@ -212,10 +213,11 @@ class PositionManager(object):
     self._add_position(position)
 
     async def callback(order):
-      self.logger.info("New Position opened:")
-      self.logger.trade("OPENED " + str(order))
       order.tag = tag
       position.process_order_update(order)
+      self.logger.info("New Position opened:")
+      self.logger.trade("OPENED " + str(order))
+      self.logger.position(position)
       #TODO - batch these up
       await self._emit(Events.ON_ORDER_FILL, order)
     await self._submit_position_trade(position, price, amount, mtsCreate,
@@ -286,10 +288,11 @@ class PositionManager(object):
       raise PositionError('No position exists for %s' % (symbol))
 
     async def callback(order):
-      self.logger.info("Position updated:")
-      self.logger.trade("UPDATED POSITION " + str(order))
       order.tag = tag
       position.process_order_update(order)
+      self.logger.info("Position updated:")
+      self.logger.trade("UPDATED POSITION " + str(order))
+      self.logger.position(position)
       await self._emit(Events.ON_ORDER_FILL, order)
     await self._submit_position_trade(position, price, amount, mtsCreate, market_type,
       tag='Update position', onClose=callback, **kwargs)
@@ -350,7 +353,7 @@ class PositionManager(object):
       await self.set_position_exit(position, position.exit_order)
 
   async def remove_position_exit_order(self, symbol=None):
-    self.log("Removing position exit order.")
+    self.logger.info("Removing position exit order.")
     symbol = symbol or self.symbol
     position = self.get_position(symbol)
     position.exit_order.stop = None

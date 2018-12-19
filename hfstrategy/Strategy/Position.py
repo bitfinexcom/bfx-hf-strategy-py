@@ -60,17 +60,17 @@ class Position(object):
     self.date = datetime.datetime.now()
 
     self.price = 0
-    self.profitLoss = 0
+    self.profit_loss = 0
     self.netProfitLoss = 0
     self.amount = 0
-    self.totalFees = 0
+    self.total_fees = 0
     self.volume = 0
     # self.orders = []
     self.orders = {}
     self.exit_order = ExitOrder(0, None, None)
     self.pending_exit_order = None
 
-    self._isOpen = True
+    self._is_open = True
 
   def has_reached_stop(self, price_update):
     price = price_update.price
@@ -127,7 +127,7 @@ class Position(object):
     profit_loss = 0
     for order in list(self.orders.values()):
       # get filled amount
-      o_amount = order.amount_orig - order.amount
+      o_amount = order.amount_filled
       order_nv = o_amount * order.price_avg
       fee = order.fee
       total_fees += fee
@@ -149,9 +149,9 @@ class Position(object):
 
     self.price = price_avg
     self.amount = pos_amount
-    self.totalFees = total_fees
+    self.total_fees = total_fees
     self.volume = volume
-    self.profitLoss = profit_loss
+    self.profit_loss = profit_loss
     self.netProfitLoss = profit_loss - total_fees
 
   def add_order(self, order):
@@ -161,14 +161,14 @@ class Position(object):
     fee = (order.price_avg * abs(order.amount)) * 0.002
 
     self.orders += [order]
-    self.totalFees += fee
+    self.total_fees += fee
     self.volume += abs(orderNV)
 
     if order.amount < 0:
-      self.profitLoss = abs(orderNV) - abs(posNV)
+      self.profit_loss = abs(orderNV) - abs(posNV)
     else:
-      self.profitLoss = abs(posNV) - abs(orderNV)
-    self.netProfitLoss = self.profitLoss - self.totalFees
+      self.profit_loss = abs(posNV) - abs(orderNV)
+    self.netProfitLoss = self.profit_loss - self.total_fees
 
     if len(self.orders) == 0:
       self.amount = order.amount
@@ -184,15 +184,15 @@ class Position(object):
     self.amount += order.amount
 
   def close(self):
-    self._isOpen = False
+    self._is_open = False
 
-  def isOpen(self):
-    return self._isOpen
+  def is_open(self):
+    return self._is_open
   
   def __str__(self):
     ''' Allow us to print the Position object in a pretty format '''
     mainStr = "Position <'{}' x {} @ {} P&L={}".format(
-      self.symbol, self.amount, self.price, self.profitLoss)
+      self.symbol, self.amount, self.price, self.profit_loss)
     if self.stop != None:
         mainStr += " stop={}".format(self.stop)
     if self.target:
@@ -200,6 +200,6 @@ class Position(object):
     if self.tag:
       mainStr += " tag={}".format(self.tag)
     # format trades into string
-    mainStr += " ordersCount={} isOpen={}>".format(len(self.orders), self._isOpen)
+    mainStr += " ordersCount={} is_open={}>".format(len(self.orders), self._is_open)
     return mainStr
 

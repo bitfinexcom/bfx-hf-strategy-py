@@ -31,17 +31,17 @@ def _logTrades(positions):
   for pos in positions:
     for i, o in enumerate(list(pos.orders.values())):
       lastItem = i+1 == len(pos.orders)
-      direction = "SHORT" if o.amount <0 else "LONG"
+      direction = "SHORT" if o.amount_filled < 0 else "LONG"
       pl = round(pos.netProfitLoss, 2)
-      x.add_row([o.date, pos.symbol, direction, abs(o.amount), round(o.price, 2),
+      x.add_row([o.date, pos.symbol, direction, o.amount_filled, round(o.price_avg, 2),
                 round(o.fee, 2), pl if lastItem else 0, o.tag])
   print(x)
 
 def _finish(strategy):
   print ("\nBacktesting complete: \n")
 
-  profitLoss = 0
-  totalFees = 0
+  profit_loss = 0
+  total_fees = 0
   totalTrades = 0
   totalVolume = 0
   positions = strategy.closedPositions
@@ -53,8 +53,8 @@ def _finish(strategy):
   totalGainers = 0
 
   for pos in positions:
-    profitLoss += pos.profitLoss
-    totalFees += pos.totalFees
+    profit_loss += pos.profit_loss
+    total_fees += pos.total_fees
     totalTrades += len(pos.orders)
     totalVolume += pos.volume
     if pos.netProfitLoss < 0:
@@ -70,10 +70,10 @@ def _finish(strategy):
   _logTrades(positions)
   print('')
 
-  totalNetProfitLoss = profitLoss - totalFees
+  totalNetProfitLoss = profit_loss - total_fees
   logger.info("Net P/L {} | Gross P/L {} | Vol {} | Fees {}".format(
-    round(totalNetProfitLoss, 2), round(profitLoss, 2),
-    round(totalVolume, 2), round(totalFees, 2)))
+    round(totalNetProfitLoss, 2), round(profit_loss, 2),
+    round(totalVolume, 2), round(total_fees, 2)))
   logger.info("Min P/L {} | Max P/L {} | Avg P/L {}".format(
     round(minProfitLoss, 2), round(maxProfitLoss, 2), 
     round(totalNetProfitLoss / totalTrades, 2)))
