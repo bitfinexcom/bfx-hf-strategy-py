@@ -84,9 +84,9 @@ class CustomLogger(logging.Logger):
         if self.isEnabledFor(self.POSITION):
             p_l = pos.profit_loss - pos.total_fees
             state = "OPEN" if pos.is_open() else "CLOSED"
-            message = "Net P/L {} | Gross P/L {} | Vol {} | Fees {} \n".format(
+            message = "Symbol {} | Amount_filled {} | State {} | Orders {}\n".format(
+                pos.symbol, pos.amount, state, len(pos.orders))
+            message += "\t\t\t  Net P/L {} | Gross P/L {} | Vol {} | Fees {}".format(
                 p_l, pos.profit_loss, pos.volume, pos.total_fees)
-            message += "\t\t\t  Total orders {} | state {} | symbol {}".format(
-                len(pos.orders), state, pos.symbol)
             self._log(self.POSITION, message, args, **kwargs)
 
