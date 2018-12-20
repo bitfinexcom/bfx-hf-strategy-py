@@ -32,7 +32,7 @@ def _logTrades(positions):
     for i, o in enumerate(list(pos.orders.values())):
       lastItem = i+1 == len(pos.orders)
       direction = "SHORT" if o.amount_filled < 0 else "LONG"
-      pl = round(pos.netProfitLoss, 2)
+      pl = round(pos.net_profit_loss, 2)
       x.add_row([o.date, pos.symbol, direction, o.amount_filled, round(o.price_avg, 2),
                 round(o.fee, 2), pl if lastItem else 0, o.tag])
   print(x)
@@ -57,13 +57,13 @@ def _finish(strategy):
     total_fees += pos.total_fees
     totalTrades += len(pos.orders)
     totalVolume += pos.volume
-    if pos.netProfitLoss < 0:
+    if pos.net_profit_loss < 0:
       totalLossesCount += 1
-      totalLosses += pos.netProfitLoss
+      totalLosses += pos.net_profit_loss
     else:
       totalGainersCount += 1
-      totalGainers += pos.netProfitLoss
-    netP = pos.netProfitLoss
+      totalGainers += pos.net_profit_loss
+    netP = pos.net_profit_loss
     minProfitLoss = netP if netP < minProfitLoss else minProfitLoss
     maxProfitLoss = netP if netP > maxProfitLoss else maxProfitLoss
   

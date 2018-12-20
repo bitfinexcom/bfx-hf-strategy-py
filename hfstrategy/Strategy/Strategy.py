@@ -149,20 +149,21 @@ class Strategy(PositionManager):
     else:
       symPosition = self.positions[update.symbol]
       amount = symPosition.amount
+      symPosition.update_with_price(update.price)
 
       await self._execute_events(Events.ON_UPDATE, update)
 
       # Check if stop or target price has been reached
       if symPosition.has_reached_stop(update):
         self.logger.info("Stop price reached for position: {}".format(symPosition))
-        if symPosition.exit_order.is_target_market():
+        if symPosition.exit_order.is_stop_market():
           await self.close_position_market(
             mtsCreate=update.mts, tag="Stop price reached")
           return await self._execute_events(
             Events.ON_POSITION_STOP_REACHED, update, symPosition)
       if symPosition.has_reached_target(update):
         self.logger.info("Target price reached for position: {}".format(symPosition))
-        if symPosition.exit_order.is_stop_market():
+        if symPosition.exit_order.is_target_market():
           await self.close_position_market(
             mtsCreate=update.mts, tag="Target price reached")
           return await self._execute_events(

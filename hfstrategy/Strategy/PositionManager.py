@@ -68,6 +68,7 @@ class PositionManager(object):
     # TODO: find way to add tag to close
     # order.tag = tag
     if position.amount == 0:
+      position.update_with_price(last.price)
       position.close()
       # check if was a stop loss exit
       if position.has_reached_stop(last):
