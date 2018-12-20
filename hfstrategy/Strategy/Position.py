@@ -4,7 +4,7 @@ class ExitType:
   LIMIT = 'LIMIT'
   MARKET = 'MARKET'
 
-class ExitOrder(object):
+class ExitOrder:
 
   def __init__(self, amount, target=None, stop=None, stop_type=ExitType.MARKET,
       target_type=ExitType.MARKET):
@@ -28,7 +28,7 @@ class ExitOrder(object):
     return self.stop and self.stop_type == ExitType.LIMIT
 
   def is_stop_market(self):
-    return self.stop and self.stop == ExitType.MARKET
+    return self.stop and self.stop_type == ExitType.MARKET
 
   def is_equal_to(self, exit_order):
     if not exit_order:
@@ -46,7 +46,7 @@ class ExitOrder(object):
       self.amount, self.stop, self.target, self.stop_type, self.target_type)
     return mainStr
 
-class Position(object):
+class Position:
   ExitType = ExitType()
 
   def __init__(self, symbol, stop=None, stop_type=ExitType.MARKET,
@@ -61,11 +61,10 @@ class Position(object):
 
     self.price = 0
     self.profit_loss = 0
-    self.netProfitLoss = 0
+    self.net_profit_loss = 0
     self.amount = 0
     self.total_fees = 0
     self.volume = 0
-    # self.orders = []
     self.orders = {}
     self.exit_order = ExitOrder(0, None, None)
     self.pending_exit_order = None
@@ -117,14 +116,14 @@ class Position(object):
     self.orders[order.id] = order
     # re-calculate position stats
     self._recalculate_position_stats()
+    self.update_with_price(order.price)
 
   def _recalculate_position_stats(self):
-    price_avg = 0
-    pos_amount = 0
-    pos_nv = 0
-    total_fees = 0
-    volume = 0
-    profit_loss = 0
+    price_avg = 0.0
+    pos_amount = 0.0
+    pos_nv = 0.0
+    total_fees = 0.0
+    volume = 0.0
     for order in list(self.orders.values()):
       # get filled amount
       o_amount = order.amount_filled
@@ -132,56 +131,28 @@ class Position(object):
       fee = order.fee
       total_fees += fee
       volume += abs(order_nv)
-
-      if o_amount < 0:
-        profit_loss = abs(order_nv) - abs(pos_nv)
-      else:
-        profit_loss = abs(pos_nv) - abs(order_nv)
       
       if pos_amount == 0:
-        price_avg = 0
-        pos_amount = 0
-      else:
-        price_avg = (pos_nv + order_nv) / pos_amount
+        price_avg = 0.0
+        pos_amount = 0.0
 
       pos_amount += o_amount
       pos_nv += order_nv
+
+      if pos_amount != 0:
+        price_avg = pos_nv / pos_amount
 
     self.price = price_avg
     self.amount = pos_amount
     self.total_fees = total_fees
     self.volume = volume
-    self.profit_loss = profit_loss
-    self.netProfitLoss = profit_loss - total_fees
 
-  def add_order(self, order):
-    orderNV = order.amount * order.price_vg
-    totalAmount = self.amount + order.amount
-    posNV = self.amount * self.price
-    fee = (order.price_avg * abs(order.amount)) * 0.002
-
-    self.orders += [order]
-    self.total_fees += fee
-    self.volume += abs(orderNV)
-
-    if order.amount < 0:
-      self.profit_loss = abs(orderNV) - abs(posNV)
+  def update_with_price(self, new_price):
+    if self.amount > 0:
+      self.profit_loss = (new_price - self.price) * abs(self.amount)
     else:
-      self.profit_loss = abs(posNV) - abs(orderNV)
-    self.netProfitLoss = self.profit_loss - self.total_fees
-
-    if len(self.orders) == 0:
-      self.amount = order.amount
-      self.price = order.price
-      return
-
-    if totalAmount == 0:
-      self.price = 0
-      self.amount = 0
-      return
-
-    self.price = (posNV + orderNV) / totalAmount
-    self.amount += order.amount
+      self.profit_loss = (self.price - new_price) * abs(self.amount)
+    self.net_profit_loss = self.profit_loss - self.total_fees
 
   def close(self):
     self._is_open = False
