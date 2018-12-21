@@ -18,7 +18,6 @@ strategy = Strategy(
   exchange_type=Strategy.ExchangeType.EXCHANGE,
   logLevel='INFO'
 )
-strategy.x = False
 
 @strategy.on_enter
 async def enter(update):
