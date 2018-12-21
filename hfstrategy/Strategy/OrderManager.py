@@ -28,14 +28,16 @@ class OrderManager(object):
   async def cancel_active_order(self, *args, **kwargs):
     await self.ws.cancel_order(*args, **kwargs)
 
-  async def _simulate_order_fill(self, *args, onClose=None, **kwargs):
+  async def _simulate_order_fill(self, *args, onConfirm=None, onClose=None, **kwargs):
     self.logger.info('Strategy in backtest mode, Simulating order fill.')
     order = generate_fake_data(*args, **kwargs)
     # mock order closed from websocket, this is used to maintain the
     # positions state
-    self.ws._emit('order_closed', order)
+    if onConfirm:
+      await onConfirm(order)
     if onClose:
       await onClose(order)
+      await self.ws._emit('order_closed', order)
     
 
   async def submit_trade(self, *args, **kwargs):
