@@ -100,6 +100,8 @@ class Position:
       self._update_with_order(order)
     else:
       self._add_new_order(order)
+    self.update_with_price(order.price)
+    self._recalculate_position_stats()
 
   def _add_new_order(self, order):
     self.orders[order.id] = order
@@ -114,9 +116,6 @@ class Position:
     # otherwise replace order with newest
     order.tag = old_order.tag
     self.orders[order.id] = order
-    # re-calculate position stats
-    self._recalculate_position_stats()
-    self.update_with_price(order.price)
 
   def _recalculate_position_stats(self):
     price_avg = 0.0

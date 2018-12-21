@@ -46,13 +46,22 @@ class PositionManager(object):
       return
     # ignore exchange if in margin mode
     if (e_type == self.ExchangeType.MARGIN
-      and order.type not in MARGIN_ORDERS):
+        and order.type not in MARGIN_ORDERS):
       return
     # ignore margin orders if in exchange mode
     elif (e_type == self.ExchangeType.EXCHANGE
-      and order.type not in EXCHANGE_ORDERS):
+          and order.type not in EXCHANGE_ORDERS):
       return
     position.process_order_update(order)
+    if position.amount != 0:
+      # re-create the stop/target order with new amount
+      eo = position.exit_order
+      newEo = ExitOrder(-position.amount, eo.target, eo.stop, eo.stop_type,
+        eo.target_type)
+      await self.set_position_exit(position, newEo)
+    else:
+      # remove stop and target orders
+      await self.remove_position_exit_order()
     return position
 
   async def _process_order_closed(self, order):
@@ -80,28 +89,24 @@ class PositionManager(object):
         order.tag = "Target price reached"
         await self._execute_events(
               Events.ON_POSITION_TARGET_REACHED, last, position)
-      # remove stop and target orders
-      await self.remove_position_exit_order()
       self._remove_position(position)
       self.logger.info("Position closed:")
       self.logger.trade("CLOSED " + str(order))
       self.logger.position(position)
-      await self._emit(Events.ON_ORDER_FILL, order)
       await self._emit(Events.ON_POSITION_CLOSE, position)
-    else:
-      # re-create the stop/target order with new amount
-      eo = position.exit_order
-      newEo = ExitOrder(-position.amount, eo.target, eo.stop, eo.stop_type,
-        eo.target_type)
-      await self.set_position_exit(position, newEo)
+      await self._emit(Events.ON_ORDER_FILL, order)
     await self._emit(Events.ON_POSITION_UPDATE, position)
 
   async def _process_order_update(self, order):
     pos = await self._process_order_change(order)
+    if not pos:
+      return
     await self._emit(Events.ON_POSITION_UPDATE, pos)
 
   async def _process_order_new(self, order):
     pos = await self._process_order_change(order)
+    if not pos:
+      return
     await self._emit(Events.ON_POSITION_UPDATE, pos)
 
   def set_order_manager(self, orderManager):
@@ -359,6 +364,7 @@ class PositionManager(object):
     position = self.get_position(symbol)
     position.exit_order.stop = None
     position.exit_order.target = None
+    position.exit_order.amount = 0
     if position.exit_order.is_target_limit() or position.exit_order.is_stop_limit():
       await self.set_position_exit(position, position.exit_order)
 
