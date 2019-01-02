@@ -156,8 +156,7 @@ def _start_bfx_ws(strategy, API_KEY=None, API_SECRET=None, backtesting=False):
   bfx.ws.on('connected', subscribe)
   bfx.ws.on('new_candle', strategy._process_new_candle)
   bfx.ws.on('new_trade', strategy._process_new_trade)
-  # bfx.ws.run()
-  return bfx
+  bfx.ws.run()
 
 async def _seed_candles(strategy, bfxapi):
   seed_candles = await bfxapi.rest.get_seed_candles(strategy.symbol)
