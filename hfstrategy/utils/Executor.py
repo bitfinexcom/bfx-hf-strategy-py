@@ -9,8 +9,10 @@ from ..utils.CustomLogger import CustomLogger
 from ..utils.MockWebsocketClient import MockClient
 from .DataServerWebsocket import DataServerWebsocket
 from ..Strategy.OrderManager import OrderManager
+from ..utils.charts import show_orders_chart
 
 logger = CustomLogger('HFExecutor', logLevel='INFO')
+stored_prices = []
 
 def _format_candle(mts, open, close, high, low, volume, symbol, tf):
   return {
@@ -82,25 +84,43 @@ def _finish(strategy):
     round(totalGainers, 2)))
   logger.info("{} Positions | {} Trades".format(len(positions), totalTrades))
 
+async def _seed_candles(strategy, bfxapi):
+  seed_candles = await bfxapi.rest.get_seed_candles(strategy.symbol)
+  candles = map(lambda candleArray: _format_candle(
+    candleArray[0], candleArray[1], candleArray[2], candleArray[3],
+    candleArray[4], candleArray[5], strategy.symbol, '1m'
+  ), seed_candles)
+  for candle in candles:
+    strategy._process_new_seed_candle(candle)
+
+# save candle in executor scope for the chart
+def _store_candle_price(candle):
+  global stored_prices
+  stored_prices += [(candle['close'], candle['mts'])]
+
+def _draw_chart(strategy):
+  show_orders_chart(stored_prices, strategy)
+
 ####################################################
 #                Public Functions                  #
 ####################################################
 
 def backtestWithDataServer(strategy, fromDate, toDate, trades=True, candles=True,
-  tf='1m', candleFields="*", tradeFields="*", sync=True):
+  tf='1m', candleFields="*", tradeFields="*", sync=True, show_chart=True):
+  global stored_prices
   def end():
     _finish(strategy)
-  try:
-    ws = DataServerWebsocket(symbol=strategy.symbol)
-    strategy.ws = ws
-    ws.on('done', end)
-    ws.on('new_candle', strategy._process_new_candle)
-    ws.on('new_trade', strategy._process_new_trade)
-    strategy.orderManager = OrderManager(ws, backtesting=True, logLevel='INFO')
-    strategy.backtesting = True
-    strategy.ws.run(fromDate, toDate, trades, candles, tf, candleFields, tradeFields, sync)
-  except websockets.ConnectionClosed:
-      pass 
+    if show_chart:
+      _draw_chart(strategy)
+  ws = DataServerWebsocket(symbol=strategy.symbol)
+  strategy.ws = ws
+  ws.on('done', end)
+  ws.on('new_candle', strategy._process_new_candle)
+  ws.on('new_candle', _store_candle)
+  ws.on('new_trade', strategy._process_new_trade)
+  strategy.orderManager = OrderManager(ws, backtesting=True, logLevel='INFO')
+  strategy.backtesting = True
+  strategy.ws.run(fromDate, toDate, trades, candles, tf, candleFields, tradeFields, sync)
 
 async def _process_candle_batch(strategy, candles):
   for c in candles:
@@ -112,7 +132,8 @@ async def _process_candle_batch(strategy, candles):
   strategy.on("done", call_finish)
   await strategy._emit("done")
 
-def backtestOffline(strategy, file=None, candles=None, tf='1hr'):
+def backtestOffline(strategy, file=None, candles=None, tf='1hr', show_chart=True):
+  global stored_prices
   bfx = MockClient()
   bfxOrderManager = OrderManager(bfx, backtesting=True, logLevel='INFO')
   strategy.set_order_manager(bfxOrderManager)
@@ -123,14 +144,18 @@ def backtestOffline(strategy, file=None, candles=None, tf='1hr'):
     with open(file, 'r') as f:
       candleData = json.load(f)
       candleData.reverse()
-      candles = map(lambda candleArray: _format_candle(
+      candles = [_format_candle(
         candleArray[0], candleArray[1], candleArray[2], candleArray[3],
         candleArray[4], candleArray[5], strategy.symbol, tf
-      ), candleData)
+      ) for candleArray in candleData]
+      # save candles so we can draw a chart later on
+      stored_prices= [(c['close'], c['mts']) for c in candles]
       # run async event loop
       loop = asyncio.get_event_loop()
       task = asyncio.ensure_future(_process_candle_batch(strategy, candles))
       loop.run_until_complete(task)
+      if show_chart:
+        _draw_chart(strategy)
   else:
     raise KeyError("Expected either 'candles' or 'file' in parameters.")
 
@@ -157,15 +182,6 @@ def _start_bfx_ws(strategy, API_KEY=None, API_SECRET=None, backtesting=False):
   bfx.ws.on('new_candle', strategy._process_new_candle)
   bfx.ws.on('new_trade', strategy._process_new_trade)
   bfx.ws.run()
-
-async def _seed_candles(strategy, bfxapi):
-  seed_candles = await bfxapi.rest.get_seed_candles(strategy.symbol)
-  candles = map(lambda candleArray: _format_candle(
-    candleArray[0], candleArray[1], candleArray[2], candleArray[3],
-    candleArray[4], candleArray[5], strategy.symbol, '1m'
-  ), seed_candles)
-  for candle in candles:
-    strategy._process_new_seed_candle(candle)
 
 def backtestLive(strategy):
   backtesting=True
