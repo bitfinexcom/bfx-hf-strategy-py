@@ -46,6 +46,14 @@ class ExitOrder:
       self.amount, self.stop, self.target, self.stop_type, self.target_type)
     return mainStr
 
+def _percentage_change(previous, current):
+  if current == previous:
+    return 100.0
+  try:
+      return ((float(current)-previous)/previous)*100
+  except ZeroDivisionError:
+      return 0
+
 class Position:
   ExitType = ExitType()
 
@@ -61,15 +69,36 @@ class Position:
 
     self.price = 0
     self.profit_loss = 0
+    self.profit_loss_perc = 0
     self.net_profit_loss = 0
     self.amount = 0
     self.total_fees = 0
     self.volume = 0
     self.orders = {}
+    self.realised_profit_loss = {}
     self.exit_order = ExitOrder(0, None, None)
     self.pending_exit_order = None
 
     self._is_open = True
+
+  def get_orders(self):
+    return list(self.orders.values())
+
+  def get_profit_loss(self):
+    realised = self.get_realised_profit_loss()
+    return {
+      'realised': realised,
+      'current': self.profit_loss,
+      'current_percentage': self.profit_loss_perc,
+      'gross': realised + self.profit_loss,
+      'net': realised + self.profit_loss - self.total_fees
+    }
+
+  def get_entry_order(self):
+    orders = self.get_orders()
+    if len(orders) <= 0:
+      return None
+    return orders[0]
 
   def has_reached_stop(self, price_update):
     price = price_update.price
@@ -117,6 +146,12 @@ class Position:
     order.tag = old_order.tag
     self.orders[order.id] = order
 
+  def get_realised_profit_loss(self):
+    realised_vals = list(self.realised_profit_loss.values())
+    if len(realised_vals) <= 0:
+      return 0
+    return realised_vals[-1]
+
   def _recalculate_position_stats(self):
     price_avg = 0.0
     pos_amount = 0.0
@@ -130,10 +165,20 @@ class Position:
       fee = order.fee
       total_fees += fee
       volume += abs(order_nv)
-      
+
       if pos_amount == 0:
         price_avg = 0.0
         pos_amount = 0.0
+      
+      if o_amount < 0 and pos_amount > 0:
+        # reducing position with short
+        realised_profit = (price_avg - order.price) * o_amount
+        self.realised_profit_loss[order.id] = realised_profit
+      if o_amount > 0 and pos_amount < 0:
+        # reducing position with long
+        realised_profit = (price_avg - order.price) * o_amount
+        self.realised_profit_loss[order.id] = realised_profit
+
 
       pos_amount += o_amount
       pos_nv += order_nv
@@ -149,8 +194,11 @@ class Position:
   def update_with_price(self, new_price):
     if self.amount > 0:
       self.profit_loss = (new_price - self.price) * abs(self.amount)
+      self.profit_loss_perc = _percentage_change(self.price, new_price)
     else:
+      prev = self.profit_loss
       self.profit_loss = (self.price - new_price) * abs(self.amount)
+      self.profit_loss_perc = _percentage_change(self.price, new_price)
     self.net_profit_loss = self.profit_loss - self.total_fees
 
   def close(self):

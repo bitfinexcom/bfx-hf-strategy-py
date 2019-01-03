@@ -32,11 +32,11 @@ def _logTrades(positions):
 
   for pos in positions:
     for i, o in enumerate(list(pos.orders.values())):
-      lastItem = i+1 == len(pos.orders)
+      # lastItem = i+1 == len(pos.orders)
       direction = "SHORT" if o.amount_filled < 0 else "LONG"
-      pl = round(pos.net_profit_loss, 2)
+      pl = pos.realised_profit_loss.get(o.id, 0)
       x.add_row([o.date, pos.symbol, direction, o.amount_filled, round(o.price_avg, 2),
-                round(o.fee, 2), pl if lastItem else 0, o.tag])
+                round(o.fee, 2), pl, o.tag])
   print(x)
 
 def _finish(strategy):
@@ -55,30 +55,29 @@ def _finish(strategy):
   totalGainers = 0
 
   for pos in positions:
-    profit_loss += pos.profit_loss
+    profit_loss += pos.get_profit_loss()['realised']
     total_fees += pos.total_fees
     totalTrades += len(pos.orders)
     totalVolume += pos.volume
-    if pos.net_profit_loss < 0:
+    net_pl = pos.get_profit_loss()['net']
+    if net_pl < 0:
       totalLossesCount += 1
-      totalLosses += pos.net_profit_loss
+      totalLosses += net_pl
     else:
       totalGainersCount += 1
-      totalGainers += pos.net_profit_loss
-    netP = pos.net_profit_loss
-    minProfitLoss = netP if netP < minProfitLoss else minProfitLoss
-    maxProfitLoss = netP if netP > maxProfitLoss else maxProfitLoss
+      totalGainers += net_pl
+    minProfitLoss = net_pl if net_pl < minProfitLoss else minProfitLoss
+    maxProfitLoss = net_pl if net_pl > maxProfitLoss else maxProfitLoss
   
   _logTrades(positions)
   print('')
 
-  totalNetProfitLoss = profit_loss - total_fees
   logger.info("Net P/L {} | Gross P/L {} | Vol {} | Fees {}".format(
-    round(totalNetProfitLoss, 2), round(profit_loss, 2),
+    round(net_pl, 2), round(profit_loss, 2),
     round(totalVolume, 2), round(total_fees, 2)))
   logger.info("Min P/L {} | Max P/L {} | Avg P/L {}".format(
     round(minProfitLoss, 2), round(maxProfitLoss, 2), 
-    round(totalNetProfitLoss / totalTrades, 2)))
+    round(net_pl / totalTrades, 2)))
   logger.info("Losses {} (total {}) | Gains {} (total {})".format(
     totalLossesCount, round(totalLosses, 2), totalGainersCount,
     round(totalGainers, 2)))
