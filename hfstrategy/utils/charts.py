@@ -6,6 +6,8 @@ import datetime
 def show_orders_chart(prices, strategy):
   positions = [pos for pos in strategy.closedPositions]
 
+  # sort the candles by timestamp
+  prices.sort(key=lambda x: x[1])
   # Plot price data
   t = [ datetime.datetime.fromtimestamp(p[1]/1000) for p in prices]
   s = [ p[0] for p in prices ]
