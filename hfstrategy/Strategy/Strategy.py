@@ -151,7 +151,7 @@ class Strategy(PositionManager):
       amount = symPosition.amount
       symPosition.update_with_price(update.price)
 
-      await self._execute_events(Events.ON_UPDATE, update)
+      await self._execute_events(Events.ON_UPDATE, update, symPosition)
 
       # Check if stop or target price has been reached
       if symPosition.has_reached_stop(update):
@@ -170,9 +170,9 @@ class Strategy(PositionManager):
             Events.ON_POSITION_TARGET_REACHED, update, symPosition)
 
       if amount > 0:
-        await self._execute_events(Events.ON_UPDATE_LONG, update)
+        await self._execute_events(Events.ON_UPDATE_LONG, update, symPosition)
       else:
-        await self._execute_events(Events.ON_UPDATE_SHORT, update)
+        await self._execute_events(Events.ON_UPDATE_SHORT, update, symPosition)
 
   def _add_position(self, position):
     self.positions[position.symbol] = position
@@ -301,7 +301,7 @@ class Strategy(PositionManager):
     This event is fired whenever a price update is received.
     func can be either an asyncio coroutine or a function.
 
-    @event PriceUpdate
+    @event PriceUpdate, Position
     @param func: called when update event emitted
     """
     if not func:
@@ -316,7 +316,7 @@ class Strategy(PositionManager):
     there is an open long position.
     func can be either an asyncio coroutine or a function.
 
-    @event PriceUpdate
+    @event PriceUpdate, Position
     @param func: called when update long emitted
     """
     if not func:
@@ -331,7 +331,7 @@ class Strategy(PositionManager):
     is an open short position.
     func can be either an asyncio coroutine or a function.
 
-    @event PriceUpdate
+    @event PriceUpdate, Position
     @param func: called when update short emitted 
     """
     if not func:
@@ -345,7 +345,7 @@ class Strategy(PositionManager):
     This event firest whenever a submitted order has been filled.
     func can be either an asyncio coroutine or a function.
 
-    @event PriceUpdate
+    @event Order
     @param func: called when order fill emitted
     """
     if not func:

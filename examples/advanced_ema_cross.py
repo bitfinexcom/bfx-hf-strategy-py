@@ -53,7 +53,7 @@ async def enter(update):
       await enter_short(update)
 
 @strategy.on_update_short
-async def update_short(update):
+async def update_short(update, position):
   iv = update.get_indicator_values()
   s = iv['emaS']
   l = iv['emaL']
@@ -62,7 +62,6 @@ async def update_short(update):
     return await strategy.close_position_market(mtsCreate=update.mts)
   ## if we are up by 2% then take 50% profit and set stop loss to
   ## entry price
-  position = strategy.get_position('tBTCUSD')
   # get entry of initial order
   entry = position.get_entry_order().price
   half_position = abs(position.amount)/2
@@ -79,7 +78,7 @@ async def update_short(update):
     await strategy.set_position_stop(entry, exit_type=Position.ExitType.LIMIT)
 
 @strategy.on_update_long
-async def update_long(update):
+async def update_long(update, position):
   iv = update.get_indicator_values()
   s = iv['emaS']
   l = iv['emaL']
@@ -87,7 +86,6 @@ async def update_long(update):
   if s < l:
     return await strategy.close_position_market(mtsCreate=update.mts)
   # Same as above, take profit at 2% and set stop to entry
-  position = strategy.get_position('tBTCUSD')
   # get entry of initial order
   entry = position.get_entry_order().price
   half_position = abs(position.amount)/2

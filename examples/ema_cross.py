@@ -33,7 +33,7 @@ async def enter(update):
       await strategy.open_short_position_market(mtsCreate=update.mts, amount=1)
 
 @strategy.on_update_short
-async def update_short(update):
+async def update_short(update, position):
   iv = update.get_indicator_values()
   s = iv['emaS']
   l = iv['emaL']
@@ -41,7 +41,7 @@ async def update_short(update):
     await strategy.close_position_market(mtsCreate=update.mts)
 
 @strategy.on_update_long
-async def update_long(update):
+async def update_long(update, position):
   iv = update.get_indicator_values()
   s = iv['emaS']
   l = iv['emaL']

@@ -39,13 +39,13 @@ async def enter(update):
      await strategy.open_long_position_market(mtsCreate=update.mts, amount=1)
 
 @strategy.on_update_short
-async def update_short(update):
+async def update_short(update, position):
   macd = update.get_indicator_values()['macd']
   if macd['macd'] > macd['signal']:
     await strategy.close_position_market(mtsCreate=update.mts)
 
 @strategy.on_update_long
-async def update_long(update):
+async def update_long(update, position):
   macd = update.get_indicator_values()['macd']
   if macd['macd'] < macd['signal']:
     await strategy.close_position_market(mtsCreate=update.mts)
