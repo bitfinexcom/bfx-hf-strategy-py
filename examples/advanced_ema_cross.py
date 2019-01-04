@@ -40,6 +40,7 @@ async def enter_short(update):
 
 @strategy.on_enter
 async def enter(update):
+  print ("ON ENTER")
   # We are going to use the ema cross for entrance
   iv = update.get_indicator_values()
   emaS = strategy.get_indicators()['emaS']
@@ -75,7 +76,7 @@ async def update_short(update, position):
     # here we will set our stop exit type to be a limit order.
     # This will mean we will only be charged maker fees and since we are in profit
     # we dont need to exit the position instantly with a market order
-    await strategy.set_position_stop(entry, exit_type=Position.ExitType.LIMIT)
+    await strategy.set_position_stop(entry, exit_type=Position.ExitType.MARKET)
 
 @strategy.on_update_long
 async def update_long(update, position):
@@ -96,7 +97,7 @@ async def update_long(update, position):
     await strategy.update_position_market(
       mtsCreate=update.mts, amount=-half_position,  tag="Hit mid profit target")
     # set our stop loss to be our original entry price
-    await strategy.set_position_stop(entry, exit_type=Position.ExitType.LIMIT)
+    await strategy.set_position_stop(entry, exit_type=Position.ExitType.MARKET)
 
-from hfstrategy import backtestOffline
-backtestOffline(strategy, file='btc_candle_data.json', tf='1hr', show_chart=True)
+from hfstrategy import Executor
+Executor(strategy).offline(file='btc_candle_data.json', tf='1hr')
