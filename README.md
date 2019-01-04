@@ -141,17 +141,22 @@ The price and mtsCreate timestamp must both be provided to all update handlers, 
 
 # Backtesting
 
-Honey frame work comes packed with 3 different back-testing executors which can be used to run a backtest from various sources of data.
+Honey frame work comes packed with 4 different executors which can be used to run backtests from various different sources of data and to also execute the strategy on the a live trading account. First we need to import and initialize the Executor class.
+
+```python
+from hfstrategy import Executor
+exe = Executor(strategy)
+```
 
 ## Offline
 
 The offline executor accepts the file location of candle data that is store locally. It then begins to run the candle data through the strategy in the same way that the strategy would receive the data if it was running on live data.
 
 ```python
-from hfstrategy import backtestOffline
-backtestOffline(strategy, file='btc_candle_data.json', tf='1hr', show_chart=True)
+exe.offline(file='btc_candle_data.json', tf='1hr')
 ```
-Optionally you can set the `show_chart` parameter to true which will display a matplotlib visualization of the orders/positions that the strategy created. The chart shows long orders as a green arrow, short orders as a red arrow and position closes as a blue dot.
+
+Once the executor has finishied it will display a matplotlib visualization of the orders/positions that the strategy created. The chart shows long orders as a green arrow, short orders as a red arrow and position closes as a blue dot. When using an executor that runs forever such as live or backtest_live, pressing CTR-C to kill the script will trigger the chart to render.
 
 ![alt text](https://i.ibb.co/47jL0xL/chart-pic.png "Back-testing chart example")
 
@@ -161,10 +166,9 @@ Alternatively you can connect the strategy to an instance of the [bfx-hf-data-se
 
 ```python
 import time
-from HFStrategy import backtestWithDataServer
 now = int(round(time.time() * 1000))
 then = now - (1000 * 60 * 60 * 24 * 5) # 5 days ago
-backtestWithDataServer(strategy, then, now, show_chart=True)
+exe.with_data_server(then, now)
 ```
 NOTE: this requires you to run an instance of the `bfx-hf-data-server` locally on port `8899`
 
@@ -173,19 +177,17 @@ NOTE: this requires you to run an instance of the `bfx-hf-data-server` locally o
 Live backtesting allows you to run the strategy with realtime data pulled from the Bitfinex api but with the order management still being simulated. We recommend that you use this method before running your strategy on a live account.
 
 ```python
-from HFStrategy import backtestLive
-backtestLive(strategy)
+exe.backtest_live()
 ```
 
 ## Live trading
 
-Finally, once you have tested your strategy and are happy to begin making live trades. You can run the strategy using the live executor, for this you will need your api key and secret from your Bitfinex account.
+Finally, once you have tested your strategy and are happy to begin making live trades you can run the strategy using the live executor. For this you will need your api key and secret from your Bitfinex account.
 
 ```python
-from hfstrategy import executeLive
 API_KEY="<MY_API_KEY>"
 API_SECRET="<MY_API_SECRET_KEY>"
-executeLive(strategy, API_KEY, API_SECRET)
+exe.live(API_KEY, API_SECRET)
 ```
 
 # Examples
