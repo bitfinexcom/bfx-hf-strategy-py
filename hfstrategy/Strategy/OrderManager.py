@@ -1,5 +1,6 @@
 import logging
 import time
+import asyncio
 
 from ..utils.CustomLogger import CustomLogger
 from bfxapi.models import Order, Trade
@@ -37,7 +38,10 @@ class OrderManager(object):
       await onConfirm(order)
     if onClose:
       await onClose(order)
-      await self.ws._emit('order_closed', order)
+      if asyncio.iscoroutinefunction(self.ws._emit):
+        await self.ws._emit('order_closed', order)
+      else:
+        self.ws._emit('order_closed', order)
     
 
   async def submit_trade(self, *args, **kwargs):
