@@ -72,6 +72,7 @@ class Position:
     self.profit_loss_perc = 0
     self.net_profit_loss = 0
     self.amount = 0
+    self.amount_open = 0
     self.total_fees = 0
     self.volume = 0
     self.orders = {}
@@ -83,6 +84,9 @@ class Position:
 
   def get_orders(self):
     return list(self.orders.values())
+
+  def get_filled_amount(self):
+    return self.amount
 
   def get_profit_loss(self):
     realised = self.get_realised_profit_loss()
