@@ -50,7 +50,7 @@ async def update_long(update):
 
 # Backtest offline
 from hfstrategy import backtestOffline
-backtestOffline(strategy, file='btc_candle_data.json', tf='1hr')
+backtestOffline(strategy, file='btc_candle_data.json', tf='1hr', show_chart=True)
 
 # Backtest with data-backtest server
 # import time
@@ -65,30 +65,6 @@ backtestOffline(strategy, file='btc_candle_data.json', tf='1hr')
 # API_KEY=os.getenv("BFX_KEY")
 # API_SECRET=os.getenv("BFX_SECRET")
 # bfx = executeLive(strategy, API_KEY, API_SECRET)
-
-# @strategy.on_position_update
-# async def pos_updated(position):
-#   print ("--------------------------")
-#   print ("POSITION HAS BEEN UPDATED")
-#   print ("--------------------------")
-#   print (position)
-#   print ("")
-
-# @bfx.ws.on('authenticated')
-# async def on_auth(x):
-#   mts = int(round(time.time() * 1000))
-#   update = PriceUpdate(18079, 'tBTCUSD', mts, PriceUpdate.TRADE)
-#   strategy.lastPrice['tBTCUSD'] = update
-
-#   print ("RUNNING")
-#   await strategy.open_short_position_market(mtsCreate=update.mts, amount=0.02)
-#   await asyncio.sleep(5)
-#   await strategy.update_short_position_market(mtsCreate=update.mts, amount=0.01)
-#   await asyncio.sleep(5)
-#   await strategy.set_position_stop(20000, exit_type='LIMIT')
-#   await strategy.update_long_position_market(mtsCreate=update.mts, amount=0.03)
-
-# bfx.ws.run()
 
 # Backtest live
 # from HFStrategy import backtestLive
