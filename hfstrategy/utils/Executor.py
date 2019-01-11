@@ -97,20 +97,21 @@ def _finish(strategy):
     round(totalGainers, 2)))
   logger.info("{} Positions | {} Trades".format(len(positions), totalTrades))
 
-async def _seed_candles(strategy, bfxapi):
-  seed_candles = await bfxapi.rest.get_seed_candles(strategy.symbol)
+async def _seed_candles(strategy, bfxapi, tf):
+  seed_candles = await bfxapi.rest.get_seed_candles(strategy.symbol, tf=tf)
   candles = map(lambda candleArray: _format_candle(
     candleArray[0], candleArray[1], candleArray[2], candleArray[3],
-    candleArray[4], candleArray[5], strategy.symbol, '1m'
+    candleArray[4], candleArray[5], strategy.symbol, tf
   ), seed_candles)
   for candle in candles:
     strategy._process_new_seed_candle(candle)
 
 class Executor:
 
-  def __init__(self, strategy):
+  def __init__(self, strategy, timeframe='1hr'):
     self.strategy = strategy
     self.stored_prices = []
+    self.timeframe = timeframe
 
   def _store_candle_price(self, candle):
     self.stored_prices += [(candle['close'], candle['mts'])]
@@ -137,10 +138,10 @@ class Executor:
     bfxOrderManager = OrderManager(bfx, backtesting=backtesting, logLevel=self.strategy.logLevel)
     self.strategy.set_order_manager(bfxOrderManager)
     # Start seeding cancles
-    t = asyncio.ensure_future(_seed_candles(self.strategy, bfx))
+    t = asyncio.ensure_future(_seed_candles(self.strategy, bfx, self.timeframe))
     asyncio.get_event_loop().run_until_complete(t)
     async def subscribe():
-      await bfx.ws.subscribe('candles', self.strategy.symbol, timeframe='1m')
+      await bfx.ws.subscribe('candles', self.strategy.symbol, timeframe=self.timeframe)
       await bfx.ws.subscribe('trades', self.strategy.symbol)
       await bfx.ws.subscribe('book', self.strategy.symbol)
     # bind events
@@ -150,8 +151,8 @@ class Executor:
     bfx.ws.on('new_trade', self.strategy._process_new_trade)
     bfx.ws.run()
 
-  def with_data_server(self, fromDate, toDate, trades=True, candles=True,
-      tf='1m', candleFields="*", tradeFields="*", sync=True):
+  def with_data_server(self, fromDate, toDate, trades=True, candles=True, candleFields="*",
+      tradeFields="*", sync=True):
     def end():
       _finish(self.strategy)
       self._draw_chart()
@@ -163,9 +164,9 @@ class Executor:
     ws.on('new_trade', self.strategy._process_new_trade)
     self.strategy.orderManager = OrderManager(ws, backtesting=True, logLevel='INFO')
     self.strategy.backtesting = True
-    self.strategy.ws.run(fromDate, toDate, trades, candles, tf, candleFields, tradeFields, sync)
+    self.strategy.ws.run(fromDate, toDate, trades, candles, self.timeframe, candleFields, tradeFields, sync)
 
-  def offline(self, file=None, candles=None, tf='1hr'):
+  def offline(self, file=None, candles=None):
     bfx = MockClient()
     bfxOrderManager = OrderManager(bfx, backtesting=True, logLevel='INFO')
     self.strategy.set_order_manager(bfxOrderManager)
@@ -178,7 +179,7 @@ class Executor:
         candleData.reverse()
         candles = [_format_candle(
           candleArray[0], candleArray[1], candleArray[2], candleArray[3],
-          candleArray[4], candleArray[5], self.strategy.symbol, tf
+          candleArray[4], candleArray[5], self.strategy.symbol, self.timeframe
         ) for candleArray in candleData]
         # save candles so we can draw a chart later on
         self.stored_prices= [(c['close'], c['mts']) for c in candles]

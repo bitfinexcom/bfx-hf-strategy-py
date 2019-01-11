@@ -49,10 +49,10 @@ async def update_long(update, position):
     await strategy.close_position_market(mtsCreate=update.mts)
 
 from hfstrategy import Executor
-exe = Executor(strategy)
+exe = Executor(strategy,  timeframe='1hr')
 
 # Backtest offline
-exe.offline(file='btc_candle_data.json', tf='1hr')
+exe.offline(file='btc_candle_data.json')
 
 # Backtest with data-backtest server
 # import time

@@ -17,6 +17,7 @@ strategy = Strategy(
     'emaS': EMA([20])
   },
   exchange_type=Strategy.ExchangeType.EXCHANGE,
+  logLevel='DEBUG'
 )
 
 async def enter_long(update):
@@ -100,4 +101,5 @@ async def update_long(update, position):
     await strategy.set_position_stop(entry, exit_type=Position.ExitType.MARKET)
 
 from hfstrategy import Executor
-Executor(strategy).offline(file='btc_candle_data.json', tf='1hr')
+# Executor(strategy).offline(file='btc_candle_data.json', tf='1hr')
+Executor(strategy, timeframe='15m').backtest_live()
