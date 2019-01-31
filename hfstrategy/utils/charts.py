@@ -3,13 +3,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import datetime
 
-def show_orders_chart(prices, strategy):
+def show_orders_chart(pricesDict, strategy):
+  prices = [(pricesDict[l], l) for l in pricesDict.keys()]
   positions = [pos for pos in strategy.closedPositions]
-
   # sort the candles by timestamp
   prices.sort(key=lambda x: x[1])
   # Plot price data
-  t = [ datetime.datetime.fromtimestamp(p[1]/1000) for p in prices]
+  t = [ datetime.datetime.fromtimestamp(p[1]/1000) for p in prices ]
   s = [ p[0] for p in prices ]
   line, = plt.plot(t, s, zorder=2)
   line.set_color('lightblue')
