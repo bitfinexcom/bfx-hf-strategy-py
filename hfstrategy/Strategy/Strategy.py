@@ -173,6 +173,25 @@ class Strategy(PositionManager):
       else:
         await self._execute_events(Events.ON_UPDATE_SHORT, update, symPosition)
 
+  def _connected(self):
+    # check if there are any positions open
+    if len(self.positions.keys()) > 0:
+      self.logger.info("New connection detected, resetting strategy positions.")
+      self._reset()
+
+  def _reset(self):
+    """
+    Resets the state of the strategy to have no open positions. This
+    is called by default when the websocket disconnects and the dead_man_switch
+    kicks in.
+    """
+    self.logger.info("Reset called. Moving all positions to closed.")
+    # set all positions to closed
+    for key in self.positions.keys():
+      self.positions[key].close()
+      self.closedPositions += [self.positions[key]]
+    self.positions = {}
+
   def _add_position(self, position):
     self.positions[position.symbol] = position
 
