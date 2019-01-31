@@ -9,6 +9,7 @@ from bfxapi import Client
 
 from ..utils.CustomLogger import CustomLogger
 from ..utils.MockWebsocketClient import MockClient
+from ..utils.MockOrderManager import MockOrderManager
 from .DataServerWebsocket import DataServerWebsocket
 from ..Strategy.OrderManager import OrderManager
 from ..utils.charts import show_orders_chart
@@ -141,7 +142,11 @@ class Executor:
       logLevel=self.strategy.logLevel,
       max_retries=120 # connection retry 120 times before exiting (10 mins)
     )
-    bfxOrderManager = OrderManager(bfx, backtesting=backtesting, logLevel=self.strategy.logLevel)
+    # use mock order manager if in backtest mode
+    if backtesting:
+      bfxOrderManager = MockOrderManager(bfx, logLevel=self.strategy.logLevel)
+    else:
+      bfxOrderManager = OrderManager(bfx, logLevel=self.strategy.logLevel)
     self.strategy.set_order_manager(bfxOrderManager)
     # Start seeding cancles
     t = asyncio.ensure_future(_seed_candles(self.strategy, bfx, self.timeframe))
@@ -171,14 +176,14 @@ class Executor:
     ws.on('new_trade', self.strategy._process_new_trade)
     # mock order simulation
     bfx = MockClient()
-    bfxOrderManager = OrderManager(bfx, backtesting=True, logLevel='INFO')
+    bfxOrderManager = MockOrderManager(bfx, logLevel=self.strategy.logLevel)
     self.strategy.set_order_manager(bfxOrderManager)
     self.strategy.backtesting = True
     self.strategy.ws.run(self.strategy.symbol, fromDate, toDate, trades, candles, self.timeframe, candleFields, tradeFields, sync)
 
   def offline(self, file=None, candles=None):
     bfx = MockClient()
-    bfxOrderManager = OrderManager(bfx, backtesting=True, logLevel='INFO')
+    bfxOrderManager = MockOrderManager(bfx, logLevel=self.strategy.logLevel)
     self.strategy.set_order_manager(bfxOrderManager)
     self.strategy.backtesting = True
     if candles:
