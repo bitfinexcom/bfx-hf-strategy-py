@@ -76,7 +76,9 @@ class Strategy(PositionManager):
         if dk == '*':
           i.add(data)
         else:
-          i.add(data[dk])
+          d = data.get(dk)
+          if d:
+            i.add(d)
 
   def _update_indicator_data(self, dataType, data):
     for key in self.indicators:
@@ -85,15 +87,12 @@ class Strategy(PositionManager):
       dk = i.get_data_key()
  
       if dt == '*' or dt == dataType:
-        t = type(data)
-        if t is float or t is int:
-          if math.isfinite(data):
-            i.update(data)
-            return
         if dk == '*':
           i.update(data)
         else:
-          i.update(data[dk])
+          d = data.get(dk)
+          if d:
+            i.update(d)
 
   def _add_candle_data(self, candle):
     dataKey = candleMarketDataKey(candle)
@@ -125,7 +124,7 @@ class Strategy(PositionManager):
 
   async def _process_new_trade(self, trade):
     price = trade['price']
-    self._update_indicator_data('trade', price)
+    self._update_indicator_data('trade', trade)
 
     if self.is_indicators_ready():
       pu = PriceUpdate(
@@ -139,7 +138,7 @@ class Strategy(PositionManager):
     self._add_candle_data(candle)
 
   def _process_new_seed_trade(self, trade):
-    self._update_indicator_data('trade', trade['price'])
+    self._update_indicator_data('trade', trade)
 
   async def _process_price_update(self, update):
     self.lastPrice[update.symbol] = update
