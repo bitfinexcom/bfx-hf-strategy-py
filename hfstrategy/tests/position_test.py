@@ -1,14 +1,15 @@
-import sys
+"""
+This script tests the calculation of the position. I.e if an order fills
+or partially fills then the profit/loss, position.amount ect.. should update correctly
+"""
+
 import pytest
 import asyncio
-sys.path.append('../')
 
-from hfstrategy import Strategy
-from bfxhfindicators import MACD
-from hfstrategy.Strategy.OrderManager import OrderManager
-from hfstrategy.utils.MockWebsocketClient import MockClient
-from hfstrategy.Strategy.Position import Position
-from hfstrategy.Strategy.OrderManager import generate_fake_data
+from ..Strategy.Position import Position
+from ..models import Events
+from ..utils.MockOrderManager import generate_fake_data
+from .helpers import EventWatcher, create_mock_strategy
 
 test_candle_1 = {
   'mts': 1533919680000,
@@ -81,34 +82,22 @@ test_candle_3 = {
 @pytest.fixture(scope='function', autouse=True)
 async def strategy():
   # create a test strategy
-  strategy = Strategy(
-    symbol='tBTCUSD',
-    indicators={
-      'macd': MACD([10, 26, 9]),
-    },
-    exchange_type=Strategy.ExchangeType.EXCHANGE,
-    logLevel='INFO'
-  )
-  # create mock bfxapi
-  bfx = MockClient()
-  # create an ordermanager in backtest mode
-  bfxOrderManager = OrderManager(bfx, backtesting=True, logLevel='INFO')
-  strategy.set_order_manager(bfxOrderManager)
-  strategy.mock_ws = bfx
-  # inject a fake trade to get latest price
+  strategy = create_mock_strategy()
+  # inject a fake candle to get latest price
   await strategy._process_new_candle(test_candle_1)
   return strategy
-
-## Test updating position
 
 @pytest.mark.asyncio
 async def test_new_market_order(strategy):
   # inject candle 2
   await strategy._process_new_candle(test_candle_2)
   expected_fee = test_candle_2['close'] * 0.002
+
+  o_new = EventWatcher.watch(strategy.events, Events.ON_POSITION_UPDATE)
   await strategy.open_long_position_market(mtsCreate=0, amount=1)
+  await o_new.wait_until_complete()
+
   position = strategy.get_position('tBTCUSD')
-  await asyncio.sleep(0.01)
   assert position.amount == 1
   assert position.is_open() == True
   assert position.total_fees == expected_fee
@@ -118,10 +107,15 @@ async def test_new_limit_order(strategy):
   # inject candle 2
   await strategy._process_new_candle(test_candle_2)
   expected_fee = test_candle_2['close'] * 0.001
+
+  # register event listener to order_closed
+  o_new = EventWatcher.watch(strategy.events, Events.ON_POSITION_UPDATE)
   await strategy.open_long_position_limit(
     mtsCreate=0, amount=1, price=test_candle_2['close'])
+  # continue after event has fired
+  await o_new.wait_until_complete()
+
   position = strategy.get_position('tBTCUSD')
-  await asyncio.sleep(0.01)
   assert position.amount == 1
   assert position.is_open() == True
   assert position.total_fees == expected_fee
@@ -133,12 +127,18 @@ async def test_multiple_new_long_market_orders(strategy):
   await strategy._process_new_candle(test_candle_2)
   expected_fee = ((test_candle_2['close'] * 0.002) +
                   (test_candle_3['close'] * 0.002))
+  
+  o_new = EventWatcher.watch(strategy.events, Events.ON_POSITION_UPDATE)
   await strategy.open_long_position_market(mtsCreate=0, amount=1)
+  await o_new.wait_until_complete()
+
   # inject candle 3
   await strategy._process_new_candle(test_candle_3)
+  o_new_2 = EventWatcher.watch(strategy.events, Events.ON_POSITION_UPDATE)
   await strategy.update_long_position_market(mtsCreate=1, amount=1)
+  await o_new_2.wait_until_complete()
+
   position = strategy.get_position('tBTCUSD')
-  await asyncio.sleep(0.01)
   assert position.amount == 2
   assert position.is_open() == True
   assert position.total_fees == expected_fee
@@ -148,7 +148,10 @@ async def test_multiple_new_long_market_orders(strategy):
 async def test_open_and_close_position(strategy):
   # inject candle 2
   await strategy._process_new_candle(test_candle_2)
+  o_new = EventWatcher.watch(strategy.events, Events.ON_POSITION_UPDATE)
   await strategy.open_long_position_market(mtsCreate=0, amount=1)
+  await o_new.wait_until_complete()
+
   position = strategy.get_position('tBTCUSD')
   # inject candle 3
   await strategy._process_new_candle(test_candle_3)
@@ -156,8 +159,11 @@ async def test_open_and_close_position(strategy):
   expected_fee = test_candle_2['close'] * 0.002
   expected_net_pl = test_candle_3['close'] - test_candle_2['close'] - expected_fee
   assert position.net_profit_loss == expected_net_pl
+
+  o_new_2 = EventWatcher.watch(strategy.events, Events.ON_POSITION_UPDATE)
   await strategy.close_position_market(mtsCreate=1)
-  await asyncio.sleep(0.01)
+  await o_new_2.wait_until_complete()
+
   expected_fee = (test_candle_2['close']  * 0.002) + (test_candle_3['close'] * 0.002)
   # position.update_with_price(test_candle_3['close'])
   assert position.total_fees == expected_fee
@@ -168,7 +174,10 @@ async def test_open_and_close_position(strategy):
 
 @pytest.mark.asyncio
 async def test_target_market_exit(strategy):
+  o_new = EventWatcher.watch(strategy.events, Events.ON_POSITION_UPDATE)
   await strategy.open_long_position_market(mtsCreate=0, amount=1)
+  await o_new.wait_until_complete()
+
   await strategy.set_position_target(6400)
   pos = strategy.get_position('tBTCUSD')
   # load candle that reaches target price
@@ -182,7 +191,10 @@ async def test_target_market_exit(strategy):
 @pytest.mark.asyncio
 async def test_stop_market_exit(strategy):
   await strategy._process_new_candle(test_candle_3)
+  o_new = EventWatcher.watch(strategy.events, Events.ON_POSITION_UPDATE)
   await strategy.open_long_position_market(mtsCreate=0, amount=1)
+  await o_new.wait_until_complete()
+
   await strategy.set_position_stop(6380)
   pos = strategy.get_position('tBTCUSD')
   # load candle that reaches stop price
@@ -195,7 +207,9 @@ async def test_stop_market_exit(strategy):
 
 @pytest.mark.asyncio
 async def test_switch_between_exit_type(strategy):
+  o_new = EventWatcher.watch(strategy.events, Events.ON_POSITION_UPDATE)
   await strategy.open_long_position_market(mtsCreate=0, amount=1)
+  await o_new.wait_until_complete()
   pos = strategy.get_position('tBTCUSD')
   # target and stop should be market
   assert pos.exit_order.target == None
@@ -219,23 +233,32 @@ async def test_switch_between_exit_type(strategy):
 
 @pytest.mark.asyncio
 async def test_dynamic_position_update_order_update(strategy):
+  o_new = EventWatcher.watch(strategy.events, Events.ON_POSITION_UPDATE)
   await strategy.open_long_position_limit(
     price=1000, mtsCreate=0, amount=1)
+  await o_new.wait_until_complete()
+
   position = strategy.get_position('tBTCUSD')
   # send fake order update via event emitter
   fake_order = generate_fake_data('tBTCUSD', 1500, 0, 0, 'EXCHANGE LIMIT')
   fake_order.amount = 2.5
   fake_order.amount_orig = 3
   fake_order.amount_filled = fake_order.amount_orig - fake_order.amount
-  await strategy.mock_ws.ws._emit('order_update', fake_order)
-  await asyncio.sleep(0.01)
+
+  o_update = EventWatcher.watch(strategy.events, Events.ON_POSITION_UPDATE)
+  strategy.mock_ws.ws._emit('order_update', fake_order)
+  await o_update.wait_until_complete()
+
   # check if position has updated with the correct amount
   assert position.amount == 1.5
 
 @pytest.mark.asyncio
 async def test_dynamic_position_update_partial_fill(strategy):
+  o_new = EventWatcher.watch(strategy.events, Events.ON_POSITION_UPDATE)
   await strategy.open_long_position_limit(
     price=1000, mtsCreate=0, amount=10)
+  await o_new.wait_until_complete()
+
   position = strategy.get_position('tBTCUSD')
   # send fake order update via event emitter
   # short 10 but only 2.5 filled
@@ -244,8 +267,11 @@ async def test_dynamic_position_update_partial_fill(strategy):
   fake_order.amount = -7.5
   fake_order.amount_orig = -10
   fake_order.amount_filled = fake_order.amount_orig - fake_order.amount
-  await strategy.mock_ws.ws._emit('order_update', fake_order)
-  await asyncio.sleep(0.01)
+
+  o_update = EventWatcher.watch(strategy.events, Events.ON_POSITION_UPDATE)
+  strategy.mock_ws.ws._emit('order_update', fake_order)
+  await o_update.wait_until_complete()
+
   assert position.amount == 7.5
   assert position.is_open() == True
   # send fake order update via event emitter
@@ -255,22 +281,31 @@ async def test_dynamic_position_update_partial_fill(strategy):
   fake_order.amount = 0
   fake_order.amount_orig = -10
   fake_order.amount_filled = fake_order.amount_orig - fake_order.amount
-  await strategy.mock_ws.ws._emit('order_closed', fake_order2)
-  await asyncio.sleep(0.01)
+
+  o_closed = EventWatcher.watch(strategy.events, Events.ON_POSITION_UPDATE)
+  strategy.mock_ws.ws._emit('order_closed', fake_order2)
+  await o_closed.wait_until_complete()
+
   assert position.amount == 0
   assert position.is_open() == False
 
 
 @pytest.mark.asyncio
 async def test_dynamic_position_update_order_closed(strategy):
+  o_new = EventWatcher.watch(strategy.events, Events.ON_POSITION_UPDATE)
   await strategy.open_long_position_limit(
     price=1000, mtsCreate=0, amount=1)
+  await o_new.wait_until_complete()
+
   position = strategy.get_position('tBTCUSD')
   # send fake order update via event emitter
   fake_order = generate_fake_data('tBTCUSD', 1500, 2, 22020, 'EXCHANGE LIMIT')
   fake_order.amount_filled = fake_order.amount_orig - fake_order.amount
-  await strategy.mock_ws.ws._emit('order_closed', fake_order)
-  await asyncio.sleep(0.01)
+
+  o_closed = EventWatcher.watch(strategy.events, Events.ON_POSITION_UPDATE)
+  strategy.mock_ws.ws._emit('order_closed', fake_order)
+  await o_closed.wait_until_complete()
+
   # check if position has updated with the correct amount
   assert position.amount == 3
   expected_volume = 1000 + (1500 * 2)
@@ -284,23 +319,31 @@ async def test_dynamic_position_update_order_closed(strategy):
 
 @pytest.mark.asyncio
 async def test_dynamic_position_update_order_new(strategy):
+  o_new = EventWatcher.watch(strategy.events, Events.ON_POSITION_UPDATE)
   await strategy.open_long_position_limit(
     price=1000, mtsCreate=0, amount=1)
+  await o_new.wait_until_complete()
+
   position = strategy.get_position('tBTCUSD')
   # send fake order update via event emitter
   fake_order = generate_fake_data('tBTCUSD', 1500, 1.2, 20202, 'EXCHANGE LIMIT')
   fake_order.amount = 1.2
   fake_order.amount_orig = 1.2
   fake_order.amount_filled = fake_order.amount_orig - fake_order.amount
-  await strategy.mock_ws.ws._emit('order_new', fake_order)
-  await asyncio.sleep(0.01)
+
+  o_new_2 = EventWatcher.watch(strategy.events, Events.ON_POSITION_UPDATE)
+  strategy.mock_ws.ws._emit('order_new', fake_order)
+  await o_new_2.wait_until_complete()
   # check if position has updated with the correct amount
   assert position.amount == 1
 
 @pytest.mark.asyncio
 async def test_dynamic_profit_loss_calculation(strategy):
+  o_new = EventWatcher.watch(strategy.events, Events.ON_POSITION_UPDATE)
   await strategy.open_long_position_limit(
     price=test_candle_1['close'], mtsCreate=0, amount=3)
+  await o_new.wait_until_complete()
+
   # check profit losss
   expect_pl = (test_candle_2['close'] - test_candle_1['close']) * 3
   await strategy._process_new_candle(test_candle_2)
@@ -313,13 +356,20 @@ async def test_dynamic_profit_loss_calculation(strategy):
 
 @pytest.mark.asyncio
 async def test_dynamic_profit_loss_calculation_new_order(strategy):
+  o_new = EventWatcher.watch(strategy.events, Events.ON_POSITION_UPDATE)
   await strategy.open_long_position_limit(
     price=test_candle_1['close'], mtsCreate=0, amount=3)
+  await o_new.wait_until_complete()
+
   position = strategy.get_position('tBTCUSD')
   # create short order
   await strategy._process_new_candle(test_candle_2)
+
+  o_update = EventWatcher.watch(strategy.events, Events.ON_POSITION_UPDATE)
   await strategy.update_long_position_limit(
     price=test_candle_2['close'], mtsCreate=0, amount=-1.5)
+  await o_update.wait_until_complete()
+
   # position update takes 1.5 profit
   profit_taken = (test_candle_2['close'] - test_candle_1['close']) * 1.5
   await strategy._process_new_candle(test_candle_3)
@@ -334,17 +384,24 @@ async def test_dynamic_profit_loss_calculation_new_order(strategy):
 @pytest.mark.asyncio
 async def test_dynamic_stop_target_update(strategy):
   # open initial order
+  o_new = EventWatcher.watch(strategy.events, Events.ON_POSITION_UPDATE)
   await strategy.open_long_position_limit(
     price=test_candle_1['close'], mtsCreate=0, amount=3)
+  await o_new.wait_until_complete()
+
   await strategy.set_position_stop(100, exit_type=Position.ExitType.LIMIT)
   await strategy.set_position_target(10000, exit_type=Position.ExitType.LIMIT)
   position = strategy.get_position('tBTCUSD')
   assert position.exit_order.stop == 100
   assert position.exit_order.target == 10000
   assert position.exit_order.amount == -3
+
   ## create a another order
+  o_update = EventWatcher.watch(strategy.events, Events.ON_POSITION_UPDATE)
   await strategy.update_long_position_limit(
     price=test_candle_1['close'], mtsCreate=0, amount=3)
+  await o_update.wait_until_complete()
+
   assert position.exit_order.stop == 100
   assert position.exit_order.target == 10000
   assert position.exit_order.amount == -6
@@ -354,17 +411,25 @@ async def test_dynamic_stop_target_update(strategy):
   fake_order.amount = -5
   fake_order.amount_orig = -10
   fake_order.amount_filled = -5
-  await strategy.mock_ws.ws._emit('order_update', fake_order)
+
+  o_update_2 = EventWatcher.watch(strategy.events, Events.ON_POSITION_UPDATE)
+  strategy.mock_ws.ws._emit('order_update', fake_order)
+  await o_update_2.wait_until_complete()
   assert position.exit_order.stop == 100
   assert position.exit_order.target == 10000
   assert position.exit_order.amount == -1
+
   ## similate partial order fully filled
   fake_order2 = generate_fake_data('tBTCUSD', 1000, 0, 20, 'EXCHANGE LIMIT')
   fake_order2.id = 1
   fake_order2.amount = 0
   fake_order2.amount_orig = -10
   fake_order2.amount_filled = -10
-  await strategy.mock_ws.ws._emit('order_closed', fake_order2)
+
+  o_closed = EventWatcher.watch(strategy.events, Events.ON_POSITION_UPDATE)
+  strategy.mock_ws.ws._emit('order_closed', fake_order2)
+  await o_closed.wait_until_complete()
+
   assert position.exit_order.stop == 100
   assert position.exit_order.target == 10000
   assert position.exit_order.amount == 4
