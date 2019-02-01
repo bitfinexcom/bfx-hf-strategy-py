@@ -18,11 +18,17 @@ class MockOrderManager(object):
     self.logger = CustomLogger('HFSimulatedOrderManager', logLevel=logLevel)
     self.bfxapi = bfxapi
     self.ws = bfxapi.ws
+    self.sent_requests = []
 
-  async def cancel_active_order(self, *args, **kwargs):
-    pass
+  async def cancel_active_order(self, *args, onConfirm=None, **kwargs):
+    # save submission for testing
+    self._save_request('cancel_active_order', *args, **kwargs)
+    if onConfirm:
+      await onConfirm(None)
 
   async def submit_trade(self, *args, onConfirm=None, onClose=None, **kwargs):
+    # save submission for testing
+    self._save_request('submit_trade', *args, **kwargs)
     order = generate_fake_data(*args, **kwargs)
     if onConfirm:
       await onConfirm(order)
@@ -32,3 +38,22 @@ class MockOrderManager(object):
         await self.bfxapi.ws._emit('order_closed', order)
       else:
         self.bfxapi.ws._emit('order_closed', order)
+
+  def _save_request(self, func_name, *args, **kwargs):
+    self.sent_requests += [{
+      'time': int(round(time.time() * 1000)),
+      'data': {
+        "func": func_name,
+        "args": args,
+        "kwargs": kwargs
+      }
+    }]
+
+  def get_sent_items(self):
+    return self.sent_requests
+
+  def get_last_sent_item(self):
+    return self.sent_requests[-1:][0]
+
+  def get_sent_items_count(self):
+    return len(self.sent_requests)
