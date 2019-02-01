@@ -333,40 +333,27 @@ class PositionManager(object):
     eo = ExitOrder(-position.amount, target, stop, stop_type, target_type)
     await self.set_position_exit(position, eo)
 
-  async def remove_position_target(self, symbol=None):
-    symbol = symbol or self.symbol
-    position = self.get_position(symbol)
-    if position.exit_order.is_target_limit():
-      # cancel order
-      if position.exit_order.order:
-        await self.orderManager.cancel_active_order(position.exit_order.order.id)
-        position.exit_order.target = None
-    else:
-      position.exit_order.target = None
 
   async def remove_position_target(self, symbol=None):
     symbol = symbol or self.symbol
     position = self.get_position(symbol)
-    position.exit_order.target = None
-    if position.exit_order.is_target_limit():
-      await self.set_position_exit(position, position.exit_order)
+    eo = ExitOrder(position.exit_order.amount, None,
+                  position.exit_order.stop, position.exit_order.stop_type, None)
+    await self.set_position_exit(position, eo)
 
   async def remove_position_stop(self, symbol=None):
     symbol = symbol or self.symbol
     position = self.get_position(symbol)
-    position.exit_order.stop = None
-    if position.exit_order.is_stop_limit():
-      await self.set_position_exit(position, position.exit_order)
+    eo = ExitOrder(position.exit_order.amount, position.exit_order.target,
+                  None, None, position.exit_order.target_type)
+    await self.set_position_exit(position, eo)
 
   async def remove_position_exit_order(self, symbol=None):
     self.logger.info("Removing position exit order.")
     symbol = symbol or self.symbol
     position = self.get_position(symbol)
-    position.exit_order.stop = None
-    position.exit_order.target = None
-    position.exit_order.amount = 0
-    if position.exit_order.is_target_limit() or position.exit_order.is_stop_limit():
-      await self.set_position_exit(position, position.exit_order)
+    eo = ExitOrder(0, None, None, None, None)
+    await self.set_position_exit(position, eo)
 
   async def set_position_exit(self, position, new_exit_order):
     self.logger.info("Setting new exit position: {}".format(new_exit_order))
