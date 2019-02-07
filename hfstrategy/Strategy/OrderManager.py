@@ -21,6 +21,9 @@ class OrderManager(object):
   async def cancel_active_order(self, *args, **kwargs):
     await self.ws.cancel_order(*args, **kwargs)
 
+  async def cancel_order_group(self, *args, **kwargs):
+    await self.ws.cancel_order_group(*args, **kwargs)
+
   async def submit_trade(self, *args, **kwargs):
     await self._submit_order(*args, **kwargs)
 

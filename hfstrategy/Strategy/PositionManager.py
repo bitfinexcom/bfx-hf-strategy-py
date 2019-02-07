@@ -1,4 +1,6 @@
 import logging
+import time
+
 from enum import Enum
 from .Position import Position, ExitOrder
 from ..utils.CustomLogger import CustomLogger
@@ -53,6 +55,9 @@ class PositionManager(object):
           and order.type not in EXCHANGE_ORDERS):
       return
     position.process_order_update(order)
+    # if no value filled then ignore resetting exit order
+    if (order.amount_filled == 0):
+      return position
     if position.amount != 0:
       # re-create the stop/target order with new amount
       eo = position.exit_order
@@ -352,7 +357,7 @@ class PositionManager(object):
     self.logger.info("Removing position exit order.")
     symbol = symbol or self.symbol
     position = self.get_position(symbol)
-    eo = ExitOrder(0, None, None, None, None)
+    eo = ExitOrder(0, None, None)
     await self.set_position_exit(position, eo)
 
   async def set_position_exit(self, position, new_exit_order):
@@ -365,10 +370,12 @@ class PositionManager(object):
     current_exit_order = position.exit_order
     # check if we need to update
     if new_exit_order.is_equal_to(current_exit_order):
+      self.logger.info("New exit order is the same as live exit order.")
       return
     # check if there is already a pending order with same values
     if position.pending_exit_order:
       if position.pending_exit_order.is_equal_to(new_exit_order):
+        self.logger.info("New exit order is the same as pending exit order.")
         return
     position.exit_order.stop_type = new_exit_order.stop_type
     position.exit_order.target_type = new_exit_order.target_type
@@ -377,19 +384,22 @@ class PositionManager(object):
     position.exit_order.amount = new_exit_order.amount
     # check if we are in backtest mode
     if self.is_backtesting():
-      # TODO fake stop loss for backtesting
+      # TODO fake limit stop loss for backtesting
       return
 
     # set position exit_order callback
     async def create_complete(order):
+      print ("********* Complete")
       # now stop is confirmed, we can set local vars
       position.exit_order.amount = new_exit_order.amount
       position.pending_exit_order = None
       position.exit_order.set_order(order)
 
     async def create_exit_order(order):
+      print ("******** CREATING")
       # set a pending exit order on position
       position.pending_exit_order = new_exit_order
+      group_id = int(round(time.time() * 1000))
       if new_exit_order.is_target_limit() and new_exit_order.is_stop_limit():
         self.logger.info("Submitting stop loss at price={} amount={}".format(
           new_exit_order.stop, new_exit_order.amount))
@@ -397,39 +407,41 @@ class PositionManager(object):
           new_exit_order.target, new_exit_order.amount))
         # open oco order
         await self._submit_position_trade(position, new_exit_order.target, new_exit_order.amount,
-          last.mts, limit_type, oco=True, oco_stop_price=str(new_exit_order.stop),
+          last.mts, limit_type, oco=True, oco_stop_price=new_exit_order.stop, gid=group_id,
           onConfirm=create_complete)
       elif new_exit_order.is_target_limit():
         # just a limit for target
         self.logger.info("Submitting target exit at price={} amount={}".format(
           new_exit_order.target, new_exit_order.amount))
         await self._submit_position_trade(position, new_exit_order.target, new_exit_order.amount,
-          last.mts, limit_type, onConfirm=create_complete)
+          last.mts, limit_type, gid=group_id, onConfirm=create_complete)
       elif new_exit_order.is_stop_limit():
         # just a stop-limit for stop loss
         self.logger.info("Submitting stop loss at price={} amount={}".format(
           new_exit_order.stop, new_exit_order.amount))
         await self._submit_position_trade(position, new_exit_order.stop, new_exit_order.amount,
-          last.mts, stop_type, price_aux_limit=str(new_exit_order.stop), onConfirm=create_complete)
+          last.mts, stop_type, gid=group_id, price_aux_limit=new_exit_order.stop,
+          onConfirm=create_complete)
       else:
-        # either not set or set to market
-        position.exit_order = new_exit_order
-        position.pending_exit_order = None
-        return
+        # exit order is of type market
+        await create_complete(None)
 
+    print ("Here.....")
+    # check if we currently have an exit order set
     if position.exit_order.order:
-      if position.exit_order.amount != 0:
+      if new_exit_order.amount != 0:
+        print ("Recreate")
         # close the current exit order and re-create
-        await self.orderManager.cancel_active_order(position.exit_order.order.id,
-          onConfirm=create_exit_order)
+        await self.orderManager.cancel_order_group(position.exit_order.order.gid, onConfirm=create_exit_order)
       else:
+        print ("cancel gid: {}".format(position.exit_order.order.gid))
         # just cancel order
-        await self.orderManager.cancel_active_order(position.exit_order.order.id)
+        await self.orderManager.cancel_order_group(position.exit_order.order.gid)
         position.exit_order.order = None
     else:
+      print ("Create")
       # create the exit order
       await create_exit_order(None)
-
 
   async def _submit_position_trade(self, position, price, amount, mts_create, market_type,
       *args, **kwargs):

@@ -5,9 +5,9 @@ import asyncio
 from ..utils.CustomLogger import CustomLogger
 from bfxapi.models import Order, Trade
 
-def generate_fake_data(symbol, price, amount, mts_create, market_type, *args, **kwargs):
+def generate_fake_data(symbol, price, amount, mts_create, market_type, *args, gid=None, **kwargs):
   order_id = int(round(time.time() * 1000))
-  d = [order_id, 2, 3, symbol, mts_create, mts_create, 0, amount, market_type, market_type,
+  d = [order_id, gid, 3, symbol, mts_create, mts_create, 0, amount, market_type, market_type,
       None, None, None, "EXECUTED @ {}({})".format(price, amount), None, None, price,
       price, 0, 0, None, None, None, 0, 0, None, None, None, "API>BFX", None, None, None]
   return Order.from_raw_order(d)
@@ -23,6 +23,11 @@ class MockOrderManager(object):
   async def cancel_active_order(self, *args, onConfirm=None, **kwargs):
     # save submission for testing
     self._save_request('cancel_active_order', *args, **kwargs)
+    if onConfirm:
+      await onConfirm(None)
+
+  async def cancel_order_multi(self, *args, onConfirm=None, **kwargs):
+    self._save_request('cancel_order_multi', *args, **kwargs)
     if onConfirm:
       await onConfirm(None)
 
