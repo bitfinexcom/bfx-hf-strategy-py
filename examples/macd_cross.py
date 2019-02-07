@@ -1,13 +1,9 @@
 import sys
-import logging
 import asyncio
-import time
 sys.path.append('../')
 
 from hfstrategy import Strategy
-from hfstrategy import PositionError
 from bfxhfindicators import MACD
-from hfstrategy.models.price_update import PriceUpdate
 
 # Initialise strategy
 strategy = Strategy(
@@ -22,7 +18,7 @@ strategy = Strategy(
 @strategy.on_enter
 async def enter(update):
   macd = strategy.get_indicators()['macd']
-  current = update.get_indicator_values()['macd']
+  current = macd.v()
   previous = macd.prev()
 
   if not previous:
@@ -40,13 +36,13 @@ async def enter(update):
 
 @strategy.on_update_short
 async def update_short(update, position):
-  macd = update.get_indicator_values()['macd']
+  macd = strategy.get_indicators()['macd']
   if macd['macd'] > macd['signal']:
     await strategy.close_position_market(mtsCreate=update.mts)
 
 @strategy.on_update_long
 async def update_long(update, position):
-  macd = update.get_indicator_values()['macd']
+  macd = strategy.get_indicators()['macd']
   if macd['macd'] < macd['signal']:
     await strategy.close_position_market(mtsCreate=update.mts)
 

@@ -17,7 +17,7 @@ strategy = Strategy(
     'emaS': EMA([20])
   },
   exchange_type=Strategy.ExchangeType.EXCHANGE,
-  logLevel='DEBUG'
+  logLevel='INFO'
 )
 
 async def enter_long(update):
@@ -41,26 +41,22 @@ async def enter_short(update):
 
 @strategy.on_enter
 async def enter(update):
-  print ("ON ENTER")
   # We are going to use the ema cross for entrance
-  iv = update.get_indicator_values()
   emaS = strategy.get_indicators()['emaS']
-  s = iv['emaS']
-  l = iv['emaL']
+  emaL = strategy.get_indicators()['emaL']
   # enter market if ema crosses
-  if emaS.crossed(l):
-    if s > l:
+  if emaS.crossed(emaL.v()):
+    if emaS.v() > emaL.v():
       await enter_long(update)
     else:
       await enter_short(update)
 
 @strategy.on_update_short
 async def update_short(update, position):
-  iv = update.get_indicator_values()
-  s = iv['emaS']
-  l = iv['emaL']
+  emaS = strategy.get_indicators()['emaS']
+  emaL = strategy.get_indicators()['emaL']
   # if emas cross then just exit the position
-  if s > l:
+  if emaS.v() > emaL.v():
     return await strategy.close_position_market(mtsCreate=update.mts)
   ## if we are up by 2% then take 50% profit and set stop loss to
   ## entry price
@@ -72,7 +68,7 @@ async def update_short(update, position):
   if update.price < entry - (position.price * 0.002):
     print ("Reached profit target, take 2%")
     await strategy.update_position_market(
-      mtsCreate=update.mts, amount=half_position, tag="Hit mid profit target")
+      mtsCreate=update.mts, amount=half_position, tag="Hit profit target")
     # set our stop loss to be our original entry price
     # here we will set our stop exit type to be a limit order.
     # This will mean we will only be charged maker fees and since we are in profit
@@ -81,11 +77,10 @@ async def update_short(update, position):
 
 @strategy.on_update_long
 async def update_long(update, position):
-  iv = update.get_indicator_values()
-  s = iv['emaS']
-  l = iv['emaL']
+  emaS = strategy.get_indicators()['emaS']
+  emaL = strategy.get_indicators()['emaL']
   # Market is going to change direction so exit position
-  if s < l:
+  if emaS.v() < emaL.v():
     return await strategy.close_position_market(mtsCreate=update.mts)
   # Same as above, take profit at 2% and set stop to entry
   # get entry of initial order
@@ -101,5 +96,10 @@ async def update_long(update, position):
     await strategy.set_position_stop(entry, exit_type=Position.ExitType.MARKET)
 
 from hfstrategy import Executor
-# Executor(strategy).offline(file='btc_candle_data.json', tf='1hr')
-Executor(strategy, timeframe='15m').backtest_live()
+Executor(strategy, timeframe='1hr').offline(file='btc_candle_data.json')
+# Executor(strategy, timeframe='1m').backtest_live()
+
+# import time
+# now = int(round(time.time() * 1000))
+# then = now - (1000 * 60 * 60 * 24 * 15) # 15 days ago
+# Executor(strategy, timeframe='30m').with_data_server(then, now)
