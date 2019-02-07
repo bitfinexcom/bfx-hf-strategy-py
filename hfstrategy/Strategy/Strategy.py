@@ -47,6 +47,7 @@ class Strategy(PositionManager):
     self.positions = {}
     self.lastPrice = {}
     self.closedPositions = []
+    self.is_ready = False
     self.indicators = indicators
     self.candle_price_key = 'close'
     self.backtesting = backtesting
@@ -179,6 +180,10 @@ class Strategy(PositionManager):
       self.logger.info("New connection detected, resetting strategy positions.")
       self._reset()
 
+  async def _ready(self, *args, **kwargs):
+    self.is_ready = True
+    await self._execute_events(Events.ON_READY)
+
   def _reset(self):
     """
     Resets the state of the strategy to have no open positions. This
@@ -211,7 +216,7 @@ class Strategy(PositionManager):
     @param symbol: string currency pair i.e 'tBTCUSD'
     @return PriceUpdate
     """
-    update = self.lastPrice[symbol]
+    update = self.lastPrice.get(symbol, None)
     return update
 
   def get_position(self, symbol):
@@ -276,7 +281,7 @@ class Strategy(PositionManager):
     @return True if in backtesting mode
     """
     return self.backtesting
-  
+
   ############################
   #       Event Hooks        #
   ############################
@@ -295,6 +300,20 @@ class Strategy(PositionManager):
     if not func:
       return self.events.on(Events.ERROR)
     self.events.on(Events.ERROR, func)
+
+  def on_ready(self, func=None):
+    """
+    Subscribe to the on ready event
+
+    This event is fired whenever the strategy is ready to begin execution. This could
+    be triggered either by webscoket authentication, backtest websocket connection or
+    backtest data loaded.
+
+    @param func: called when the strategy is ready
+    """
+    if not func:
+      return self.events.on(Events.ON_READY)
+    self.events.on(Events.ON_READY, func)
 
   def on_enter(self, func=None):
     """

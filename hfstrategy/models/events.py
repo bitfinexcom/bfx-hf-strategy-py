@@ -6,6 +6,7 @@ that can be emitted by the Strategy class
 class Events:
   """ Contains a list of the available event types """
   ERROR = 'error'
+  ON_READY = 'ready'
   ON_ENTER = 'on_enter'
   ON_UPDATE = 'on_update'
   ON_UPDATE_LONG = 'on_update_long'

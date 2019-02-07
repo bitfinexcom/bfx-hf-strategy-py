@@ -17,6 +17,7 @@ from ..utils.charts import show_orders_chart
 logger = CustomLogger('HFExecutor', logLevel='INFO')
 
 async def _process_candle_batch(strategy, candles):
+  await strategy._ready()
   for c in candles:
     await strategy._process_new_candle(c)
   async def call_finish():
@@ -145,8 +146,10 @@ class Executor:
     # use mock order manager if in backtest mode
     if backtesting:
       bfxOrderManager = MockOrderManager(bfx, logLevel=self.strategy.logLevel)
+      bfx.ws.on('connected', self.strategy._ready)
     else:
       bfxOrderManager = OrderManager(bfx, logLevel=self.strategy.logLevel)
+      bfx.ws.on('authenticated', self.strategy._ready)
     self.strategy.set_order_manager(bfxOrderManager)
     # Start seeding cancles
     t = asyncio.ensure_future(_seed_candles(self.strategy, bfx, self.timeframe))
@@ -170,6 +173,7 @@ class Executor:
       self._draw_chart()
     ws = DataServerWebsocket(logLevel=self.strategy.logLevel)
     self.strategy.ws = ws
+    ws.on('connected', self.strategy._ready)
     ws.on('done', end)
     ws.on('new_candle', self.strategy._process_new_candle)
     ws.on('new_candle', self._store_candle_price)
@@ -208,12 +212,11 @@ class Executor:
       raise KeyError("Expected either 'candles' or 'file' in parameters.")
 
   def backtest_live(self):
-    backtesting=True
     self.strategy.backtesting = True
     self._register_log_on_sigkill()
-    return self._start_bfx_ws(self.strategy, backtesting=backtesting)
+    return self._start_bfx_ws(backtesting=True)
 
   def live(self, API_KEY, API_SECRET):
-    backtesting=False
+    self.strategy.backtesting = False
     self._register_log_on_sigkill()
-    return self._start_bfx_ws(self.strategy, API_KEY, API_SECRET, backtesting=backtesting)
+    return self._start_bfx_ws(API_KEY, API_SECRET, backtesting=False)
