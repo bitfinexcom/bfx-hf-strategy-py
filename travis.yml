@@ -1,0 +1,13 @@
+language: python
+
+before_install:
+  - sudo apt-get update
+  - sudo apt-get install python3
+  - sudo apt-get install python3-pip
+# command to install dependencies
+install:
+  - python3 -m pip install -r requirements.txt
+# command to run tests
+script:
+  - pylint --rcfile=pylint.rc hfstrategy
+  # - cd tests && pytest -s

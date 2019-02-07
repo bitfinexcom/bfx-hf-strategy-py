@@ -19,11 +19,12 @@ class DataServerWebsocket(GenericWebsocket):
   WS_SYNC_START = 'bt.sync.start'
   WS_SYNC_END = 'bt.sync.end'
   WS_CONNECT = 'connected'
+  WS_ERROR = 'error'
 
   def __init__(self, host='ws://localhost:8899', *args, **kwargs):
     super(DataServerWebsocket, self).__init__(host,  *args, **kwargs)
 
-  def run(self, fromDate, toDate, syncTrades=True, syncCandles=True, tf='1m',
+  def run(self, symbol, fromDate, toDate, syncTrades=True, syncCandles=True, tf='1m',
       candleFields='*', tradeFields='*', syncMissing=True):
     self.fromDate = fromDate
     self.toDate = toDate
@@ -34,6 +35,7 @@ class DataServerWebsocket(GenericWebsocket):
     self.syncMissing = syncMissing
     self.candleFields = candleFields
     self.tradeFields = tradeFields
+    self.symbol = symbol
     super(DataServerWebsocket, self).run()
   
   async def on_message(self, message):
@@ -49,6 +51,10 @@ class DataServerWebsocket(GenericWebsocket):
     elif eType == self.WS_END:
       self.logger.info("Backtest data stream complete.")
       await self.on_close()
+    elif eType == 'data.markets':
+      pass
+    elif eType == 'error':
+      await self.on_error(msg[1])
     elif eType == self.WS_CANDLE:
       await self._onCandle(msg)
     elif eType == self.WS_TRADE:

@@ -60,6 +60,7 @@ class CustomLogger(logging.Logger):
     FORMAT = "[$BOLD%(name)s$RESET] [%(levelname)s] %(message)s"
     COLOR_FORMAT = formatter_message(FORMAT, True)
     TRADE = 50
+    POSITION = 49
 
     def __init__(self, name, logLevel='DEBUG'):
         logging.Logger.__init__(self, name, logLevel)                
@@ -68,15 +69,24 @@ class CustomLogger(logging.Logger):
         console.setFormatter(color_formatter)
         self.addHandler(console)
         logging.addLevelName(self.TRADE, "TRADE")
+        logging.addLevelName(self.POSITION, "POS_STATUS")
         return
-    
+
     def trade(self, message, *args, **kws):
         if self.isEnabledFor(self.TRADE):
             message = format_word(message, 'CLOSED ', YELLOW, bold=True)
             message = format_word(message, 'OPENED ', LIGHT_BLUE, bold=True)
             message = format_word(message, 'UPDATED ', BLUE, bold=True)
             message = format_word(message, 'CLOSED_ALL ', RED, bold=True)
-            # Yes, logger takes its '*args' as 'args'.
-            self._log(self.TRADE, message, args, **kws) 
+            self._log(self.TRADE, message, args, **kws)
 
+    def position(self, pos, *args, **kwargs):
+        if self.isEnabledFor(self.POSITION):
+            p_l = pos.profit_loss - pos.total_fees
+            state = "OPEN" if pos.is_open() else "CLOSED"
+            message = "Symbol {} | Amount_filled {} | State {} | Orders {}\n".format(
+                pos.symbol, pos.amount, state, len(pos.orders))
+            message += "\t\t\t  Net P/L {} | Gross P/L {} | Vol {} | Fees {}".format(
+                p_l, pos.profit_loss, pos.volume, pos.total_fees)
+            self._log(self.POSITION, message, args, **kwargs)
 

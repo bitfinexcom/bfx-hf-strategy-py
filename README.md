@@ -1,6 +1,6 @@
 
-```
-from HFStrategy import Strategy
+```python
+from hfstrategy import Strategy
 from bfxhfindicators import EMA
 
 class EMAStrategy(Strategy):
@@ -26,9 +26,9 @@ class EMAStrategy(Strategy):
 
 ### Execute
 
-```
+```python
 import os
-from HFStrategy import executeLive
+from hfstrategy import executeLive
 executeLive(strategy, os.getenv("BFX_KEY"), os.getenv("BFX_SECRET"))
 ```
 
@@ -62,9 +62,9 @@ python3 ema_cross.py
 # Quickstart
 
 ## Defining a strategy
-To define a trading strategy, first we have to create a new object that implements the `HFStrategy` class. Then we need to decide on a set of indicators to use and bind them to the classes `indicators` variable. Strategies created with it can be used with bfx-hf-backtest or with the exec method to run on the live market. An example strategy follows below:
-```
-from HFStrategy import Strategy
+To define a trading strategy, first we have to create a new object that implements the `hfstrategy` class. Then we need to decide on a set of indicators to use and bind them to the classes `indicators` variable. Strategies created with it can be used with bfx-hf-backtest or with the exec method to run on the live market. An example strategy follows below:
+```python
+from hfstrategy import Strategy
 from bfxhfindicators import EMA
 
 class EMAStrategy(Strategy):
@@ -98,7 +98,7 @@ for candles, open, high, low, close, and vol are provided
 
 Strategy state is stored in the strategy object (`self`) and can be queried for historical candle data, indicators & indicator values, open positions, and previous strategy trades. For an example, see the EMA cross example `onEnter` handler below.
 
-```
+```python
 async def onEnter(self, update):
   iv = self.indicatorValues()
   emaS = self.indicators['emaS']
@@ -117,7 +117,7 @@ async def onEnter(self, update):
 
 ## Managing positions
 
-The HFStrategy class exposes a bunch of asynchronous methods to help open/close/update any positions:
+The hfstrategy class exposes a bunch of asynchronous methods to help open/close/update any positions:
 
 - `open_long_position_market(*args, **kwargs)`
 - `open_long_position_limit(*args, **kwargs)`
@@ -139,7 +139,57 @@ The HFStrategy class exposes a bunch of asynchronous methods to help open/close/
 
 The price and mtsCreate timestamp must both be provided to all update handlers, even those operating with MARKET orders, in order to record the price and timestamp during backtests. If these are not provided, backtests run via bfx-hf-backtest will fail.
 
+# Backtesting
 
-## Examples
+Honey frame work comes packed with 4 different executors which can be used to run backtests from various different sources of data and to also execute the strategy on the a live trading account. First we need to import and initialize the Executor class.
 
-For more info on how to use this framework please navigate to `/examples`.
+```python
+from hfstrategy import Executor
+exe = Executor(strategy)
+```
+
+## Offline
+
+The offline executor accepts the file location of candle data that is store locally. It then begins to run the candle data through the strategy in the same way that the strategy would receive the data if it was running on live data.
+
+```python
+exe.offline(file='btc_candle_data.json', tf='1hr')
+```
+
+Once the executor has finishied it will display a matplotlib visualization of the orders/positions that the strategy created. The chart shows long orders as a green arrow, short orders as a red arrow and position closes as a blue dot. When using an executor that runs forever such as live or backtest_live, pressing CTR-C to kill the script will trigger the chart to render.
+
+![alt text](https://i.ibb.co/47jL0xL/chart-pic.png "Back-testing chart example")
+
+## Data server
+
+Alternatively you can connect the strategy to an instance of the [bfx-hf-data-server](https://github.com/bitfinexcom/bfx-hf-data-server) which will allows you to specify the time period of the data that you would like to execute the strategy on. The data server will then begin to stream data for the given time period to your strategy.
+
+```python
+import time
+now = int(round(time.time() * 1000))
+then = now - (1000 * 60 * 60 * 24 * 5) # 5 days ago
+exe.with_data_server(then, now)
+```
+NOTE: this requires you to run an instance of the `bfx-hf-data-server` locally on port `8899`
+
+## Live backtesting
+
+Live backtesting allows you to run the strategy with realtime data pulled from the Bitfinex api but with the order management still being simulated. We recommend that you use this method before running your strategy on a live account.
+
+```python
+exe.backtest_live()
+```
+
+## Live trading
+
+Finally, once you have tested your strategy and are happy to begin making live trades you can run the strategy using the live executor. For this you will need your api key and secret from your Bitfinex account.
+
+```python
+API_KEY="<MY_API_KEY>"
+API_SECRET="<MY_API_SECRET_KEY>"
+exe.live(API_KEY, API_SECRET)
+```
+
+# Examples
+
+For more info on how to use this framework please navigate to `/examples` where you will find 3 example strategies including an advanced implementation.
