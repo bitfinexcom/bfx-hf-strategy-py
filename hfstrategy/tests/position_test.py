@@ -6,9 +6,9 @@ or partially fills then the profit/loss, position.amount ect.. should update cor
 import pytest
 import asyncio
 
-from ..Strategy.Position import Position
+from ..strategy.position import Position
 from ..models import Events
-from ..utils.MockOrderManager import generate_fake_data
+from ..utils.mock_order_manager import generate_fake_data
 from .helpers import EventWatcher, create_mock_strategy
 
 test_candle_1 = {

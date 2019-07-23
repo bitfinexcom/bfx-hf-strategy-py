@@ -5,10 +5,10 @@ met or executes a limit order update if the position size changes
 import pytest
 import asyncio
 
-from ..Strategy.Position import Position
+from ..strategy.position import Position
 from .helpers import EventWatcher, create_mock_strategy, generate_fake_candle
 from ..models import Events
-from ..utils.MockOrderManager import generate_fake_data
+from ..utils.mock_order_manager import generate_fake_data
 
 ## before all
 
@@ -77,7 +77,7 @@ async def test_exit_order_update_target_limit_on_position_update(strategy):
   await o_update.wait_until_complete()
   # check that it cancelled the old target order limit first.
   cancel_order = strategy.orderManager.get_sent_items()[-2:][0]
-  assert cancel_order['data']['func'] == 'cancel_order_multi'
+  assert cancel_order['data']['func'] == 'cancel_order_group'
   # check that it created a new target order limit
   last = strategy.orderManager.get_last_sent_item()
   assert last['data']['func'] == 'submit_trade'
@@ -105,7 +105,7 @@ async def test_exit_order_update_stop_limit_on_position_update(strategy):
   await o_update.wait_until_complete()
   # check that it cancelled the old target order limit first.
   cancel_order = strategy.orderManager.get_sent_items()[-2:][0]
-  assert cancel_order['data']['func'] == 'cancel_order_multi'
+  assert cancel_order['data']['func'] == 'cancel_order_group'
   # check that it created a new target order limit
   last = strategy.orderManager.get_last_sent_item()
   assert last['data']['func'] == 'submit_trade'
@@ -133,7 +133,7 @@ async def test_exit_order_close_target_limit_on_position_close(strategy):
   await o_close.wait_until_complete()
   # check last request was to cancel order
   last = strategy.orderManager.get_last_sent_item()
-  assert last['data']['func'] == 'cancel_order_multi'
+  assert last['data']['func'] == 'cancel_order_group'
 
 @pytest.mark.asyncio
 async def test_exit_order_close_stop_limit_on_position_close(strategy):
@@ -154,7 +154,7 @@ async def test_exit_order_close_stop_limit_on_position_close(strategy):
   await o_close.wait_until_complete()
   # check last request was to cancel order
   last = strategy.orderManager.get_last_sent_item()
-  assert last['data']['func'] == 'cancel_order_multi'
+  assert last['data']['func'] == 'cancel_order_group'
 
 @pytest.mark.asyncio
 async def test_exit_order_creates_oco_order_for_target_and_stop(strategy):
@@ -167,7 +167,7 @@ async def test_exit_order_creates_oco_order_for_target_and_stop(strategy):
   await strategy.set_position_target(7000, exit_type=Position.ExitType.LIMIT)
   # shouldve cancelled the first stop order
   cancel_order = strategy.orderManager.get_sent_items()[-2:][0]
-  assert cancel_order['data']['func'] == 'cancel_order_multi'
+  assert cancel_order['data']['func'] == 'cancel_order_group'
   # check last sent an OCO order
   last = strategy.orderManager.get_last_sent_item()
   assert last['data']['func'] == 'submit_trade'
@@ -272,5 +272,5 @@ async def test_exit_order_oco_orders_are_cancelled_using_group_id(strategy):
   await o_update.wait_until_complete()
   # 2nd from last
   last = strategy.orderManager.get_sent_items()[-2:][0]
-  assert last['data']['func'] == 'cancel_order_multi'
-  assert [expected_gid] == last['data']['kwargs']['gids']
+  assert last['data']['func'] == 'cancel_order_group'
+  assert expected_gid == last['data']['args'][0]

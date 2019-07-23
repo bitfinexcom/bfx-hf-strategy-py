@@ -1,9 +1,9 @@
 """
 This module exposes the core honey frameworkd packages.
 """
-from hfstrategy.Strategy.Strategy import Strategy
-from hfstrategy.Strategy.PositionManager import PositionError
-from hfstrategy.Strategy.Position import Position
-from .utils.Executor import Executor
+from hfstrategy.strategy.strategy import Strategy
+from hfstrategy.strategy.position_manager import PositionError
+from hfstrategy.strategy.position import Position
+from .utils.executor import Executor
 
 NAME = 'hfstrategy'
