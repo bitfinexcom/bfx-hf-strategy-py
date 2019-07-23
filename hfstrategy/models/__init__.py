@@ -5,3 +5,5 @@ different data models.
 
 from .events import Events
 from .price_update import PriceUpdate
+
+NAME = 'models'
