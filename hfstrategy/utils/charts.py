@@ -30,4 +30,10 @@ def show_orders_chart(pricesDict, strategy):
         color = "blue"
       plt.scatter(datetime.datetime.fromtimestamp(order.mts_create/1000), order.price_avg, s=50,
                   c=color, marker=marker, zorder=5)
+
+  # Plot indicators
+  for indicator in strategy.get_indicators().values():
+    i_v = [indicator.prev(i-1) for i in range(len(prices), 0, -1)]
+    plt.plot(t, i_v)
+
   plt.show()
