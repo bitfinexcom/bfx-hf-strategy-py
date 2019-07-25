@@ -6,6 +6,7 @@ import sys
 
 from prettytable import PrettyTable
 from bfxapi import Client
+from pyee import EventEmitter
 
 from ..utils.custom_logger import CustomLogger
 from ..utils.mock_websocket_client import MockClient
@@ -141,7 +142,10 @@ class Executor:
       manageOrderBooks=True, # verify orderbook locally
       dead_man_switch=True, # Kill all orders on disconnect
       logLevel=self.strategy.logLevel,
-      max_retries=120 # connection retry 120 times before exiting (10 mins)
+      max_retries=120, # connection retry 120 times before exiting (10 mins)
+      # stop the client creating a seperate thread for the event emitter and
+      # use the strategies event emitter
+      create_event_emitter=lambda: self.strategy.events
     )
     # use mock order manager if in backtest mode
     if backtesting:
@@ -166,12 +170,14 @@ class Executor:
     bfx.ws.on('new_trade', self.strategy._process_new_trade)
     bfx.ws.run()
 
-  def with_data_server(self, fromDate, toDate, trades=True, candles=True, candleFields="*",
-      tradeFields="*", sync=True):
+  def with_data_server(self, fromDate, toDate, trades=True, candles=True, sync=True):
     def end():
       _finish(self.strategy)
       self._draw_chart()
-    ws = DataServerWebsocket(logLevel=self.strategy.logLevel)
+    ws = DataServerWebsocket(
+      logLevel=self.strategy.logLevel,
+      create_event_emitter=lambda: self.strategy.events # use the strategies event emitter
+      )
     self.strategy.ws = ws
     ws.on('connected', self.strategy._ready)
     ws.on('done', end)
@@ -183,7 +189,7 @@ class Executor:
     bfxOrderManager = MockOrderManager(bfx, logLevel=self.strategy.logLevel)
     self.strategy.set_order_manager(bfxOrderManager)
     self.strategy.backtesting = True
-    self.strategy.ws.run(self.strategy.symbol, fromDate, toDate, trades, candles, self.timeframe, candleFields, tradeFields, sync)
+    self.strategy.ws.run(self.strategy.symbol, fromDate, toDate, trades, candles, self.timeframe, sync)
 
   def offline(self, file=None, candles=None):
     bfx = MockClient()
