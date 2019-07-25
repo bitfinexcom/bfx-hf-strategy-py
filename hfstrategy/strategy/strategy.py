@@ -4,9 +4,9 @@ import asyncio
 from threading import Thread
 from pyee import EventEmitter
 
-from .PositionManager import PositionManager
-from .Position import Position
-from ..utils.CustomLogger import CustomLogger
+from .position_manager import PositionManager
+from .position import Position
+from ..utils.custom_logger import CustomLogger
 from ..models import Events, PriceUpdate
 
 def candleMarketDataKey(candle):

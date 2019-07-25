@@ -4,3 +4,5 @@ indent-string='  '
 disable=too-few-public-methods,
         import-error,
         too-many-arguments
+
+ignore=tests,strategy,utils

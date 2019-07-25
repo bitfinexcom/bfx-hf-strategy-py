@@ -4,8 +4,8 @@ import asyncio
 
 from .. import Strategy
 from bfxhfindicators import MACD
-from ..utils.MockWebsocketClient import MockClient
-from ..utils.MockOrderManager import MockOrderManager
+from ..utils.mock_websocket_client import MockClient
+from ..utils.mock_order_manager import MockOrderManager
 
 def generate_fake_candle(mts=None, open=6373,  close=6374.5, high=6375.9,
 		low=6369.2, volume=38.58293517, symbol='tBTCUSD', tf='1h'):
