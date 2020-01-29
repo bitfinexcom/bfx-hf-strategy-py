@@ -9,8 +9,9 @@ from bfxhfindicators import EMA
 strategy = Strategy(
   symbol='tBTCUSD',
   indicators={
-    'emaL': EMA([100]),
-    'emaS': EMA([20])
+    # see https://github.com/bitfinexcom/bfx-hf-indicators-py for more info
+    'emaL': EMA(100),
+    'emaS': EMA(20)
   },
   exchange_type=Strategy.ExchangeType.EXCHANGE,
   logLevel='INFO'

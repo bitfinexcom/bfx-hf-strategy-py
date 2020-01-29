@@ -9,7 +9,8 @@ from bfxhfindicators import MACD
 strategy = Strategy(
   symbol='tBTCUSD',
   indicators={
-    'macd': MACD([10, 26, 9]),
+    # see https://github.com/bitfinexcom/bfx-hf-indicators-py for more info
+    'macd': MACD(10, 26, 9),
   },
   exchange_type=Strategy.ExchangeType.EXCHANGE,
   logLevel='INFO'

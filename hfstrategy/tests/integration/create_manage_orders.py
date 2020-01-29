@@ -22,8 +22,8 @@ fake_candle = {
 strategy = Strategy(
   symbol='tBTCUSD',
   indicators={
-    'emaL': EMA([100]),
-    'emaS': EMA([20])
+    'emaL': EMA(100),
+    'emaS': EMA(20)
   },
   exchange_type=Strategy.ExchangeType.MARGIN,
   logLevel='DEBUG'
