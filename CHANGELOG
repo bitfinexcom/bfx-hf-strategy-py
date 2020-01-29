@@ -1,3 +1,7 @@
+1.1.0
+
+- included fix for indicators bfx-hf-indicators-py/pull/8
+
 1.0.0
 
 - Removal of camel-casing file naming and git duplicates

@@ -20,7 +20,7 @@ here = path.abspath(path.dirname(__file__))
 
 setup(
     name='bfx-hf-strategy-py',
-    version='1.0.0',  # Required
+    version='1.1.0',  # Required
     description='Official Bitfinex Honey Framework for Python',  # Optional
     long_description='This is an official honey framework library used to create trading strategies',  # Optional
     long_description_content_type='text/markdown',  # Optional
