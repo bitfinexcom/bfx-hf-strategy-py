@@ -67,7 +67,7 @@ setup(
     #
     # For an analysis of "install_requires" vs pip's requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['eventemitter', 'asyncio', 'websockets', 'pylint', 'bfxapi', 'pyee', 'aiohttp'],  # Optional
+    install_requires=['eventemitter', 'asyncio', 'websockets', 'pylint', 'bitfinex-api-py', 'pyee', 'aiohttp'],  # Optional
 
     project_urls={  # Optional
         'Bug Reports': 'https://github.com/bitfinexcom/bfx-hf-strategy-py/issues',
