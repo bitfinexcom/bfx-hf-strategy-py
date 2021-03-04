@@ -1,8 +1,8 @@
 import logging
 import math
-import asyncio
 from threading import Thread
-from pyee import EventEmitter
+import asyncio
+from pyee import AsyncIOEventEmitter
 
 from .position_manager import PositionManager
 from .position import Position
@@ -52,7 +52,7 @@ class Strategy(PositionManager):
     self.candle_price_key = 'close'
     self.backtesting = backtesting
     self.symbol = symbol
-    self.events = EventEmitter(scheduler=asyncio.ensure_future)
+    self.events = AsyncIOEventEmitter()
     # initialise custom logger
     self.logLevel = logLevel
     self.logger = CustomLogger('HFStrategy', logLevel=logLevel)

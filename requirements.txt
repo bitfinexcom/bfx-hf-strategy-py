@@ -10,3 +10,6 @@ numpy==1.15.4
 pyee==5.0.0
 aiohttp==3.4.4
 # websocket-client==0.54.0
+bitfinex-api-py==1.1.10
+peewee==3.14.2
+nest-asyncio==1.5.1

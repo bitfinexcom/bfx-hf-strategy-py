@@ -1,12 +1,12 @@
 import time
 import asyncio
 
-from pyee import EventEmitter
+from pyee import AsyncIOEventEmitter
 
 class MockWebsocket():
 
   def __init__(self):
-    self.events = EventEmitter(scheduler=asyncio.ensure_future)
+    self.events = AsyncIOEventEmitter()
     self.saved_items = []
     self.emitted_items = []
 
