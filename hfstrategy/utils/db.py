@@ -67,7 +67,7 @@ async def fetch_candles(from_date, end_date, symbol, tf):
     bfx = Client(logLevel='DEBUG')
     candles = []
     minutes = tf_to_minutes(tf)
-    print(f'Fetching from {from_date} to {end_date} | {symbol} | {tf}')
+    print(f'Fetching from {mts_to_datetime(from_date)} to {mts_to_datetime(end_date)} | {symbol} | {tf}')
     step = math.floor(10000 * minutes)
     while from_date < end_date:
         end_of_interval = mts_to_datetime(from_date) + datetime.timedelta(minutes=step)
@@ -121,12 +121,13 @@ def find_fetched_candles_intervals(symbol, tf):
         if not previous_candle_dt:
             interval.append(candle)
         else:
-            if (candle_dt - previous_candle_dt).total_seconds() / 60 > minutes:
-                intervals.append(interval)
-                interval = []
-            else:
+            if (candle_dt - previous_candle_dt).total_seconds() / 60 == minutes:
                 interval.append(candle)
+            elif (candle_dt - previous_candle_dt).total_seconds() / 60 > minutes:
+                intervals.append(interval)
+                interval = [candle]
         previous_candle_dt = candle_dt
+    intervals.append(interval)
 
     clean_intervals = []
     for interval in intervals:
@@ -138,30 +139,28 @@ def find_fetched_candles_intervals(symbol, tf):
     return clean_intervals
 
 def get_missing_candles_intervals(from_date, end_date, symbol, tf):
-
+    minutes = tf_to_minutes(tf)
     fetched_intervals = find_fetched_candles_intervals(symbol, tf)
     missing_intervals = []
 
     for interval in fetched_intervals:
-        if from_date == interval['start']:
-            break
-
-        missing_intervals.append({'start': from_date, 'end': datetime_to_mts(interval['start'])})
+        if (interval['start'] - mts_to_datetime(from_date)).total_seconds() / 60 > minutes:
+            missing_intervals.append({'start': from_date, 'end': datetime_to_mts(interval['start'])})
         from_date = datetime_to_mts(interval['end'])
 
         if end_date < from_date:
             break
 
-    if from_date < end_date:
+    if from_date < end_date and (mts_to_datetime(end_date) - mts_to_datetime(from_date)).total_seconds() / 60 > minutes:
         missing_intervals.append({'start': from_date, 'end': end_date})
 
     return missing_intervals
 
 async def get_candles(from_date, end_date, symbol, tf):
-    print(f"From {mts_to_datetime(from_date)} to {mts_to_datetime(end_date)}")
+    print(f"Getting candles from {mts_to_datetime(from_date)} to {mts_to_datetime(end_date)}")
     missing_intervals = get_missing_candles_intervals(from_date, end_date, symbol, tf)
     for interval in missing_intervals:
-        print(f"Interval start: {interval['start']} | Interval end: {interval['end']}")
+        print(f"Data missing - Fetching -> Interval start: {mts_to_datetime(interval['start'])} | Interval end: {mts_to_datetime(interval['end'])}")
         await fetch_candles(interval['start'], interval['end'], symbol, tf)
     candles = [candle.to_list() for candle in
                Candle.select().where(from_date <= Candle.mts <= end_date, Candle.symbol == symbol, Candle.tf == tf).order_by(
