@@ -57,6 +57,7 @@ def list_to_chunks(lst, n=999):
         yield lst[i:i + n]
 
 def mts_to_datetime(mts):
+    #print(f"Converting {mts} to dt")
     return datetime.datetime.fromtimestamp(int(mts / 1000))
 
 def datetime_to_mts(dt):
@@ -66,7 +67,7 @@ async def fetch_candles(from_date, end_date, symbol, tf):
     bfx = Client(logLevel='DEBUG')
     candles = []
     minutes = tf_to_minutes(tf)
-    print(f'Fetching from {mts_to_datetime(from_date)} to {mts_to_datetime(end_date)} | {symbol} | {tf}')
+    print(f'Fetching from {from_date} to {end_date} | {symbol} | {tf}')
     step = math.floor(10000 * minutes)
     while from_date < end_date:
         end_of_interval = mts_to_datetime(from_date) + datetime.timedelta(minutes=step)
@@ -137,6 +138,7 @@ def find_fetched_candles_intervals(symbol, tf):
     return clean_intervals
 
 def get_missing_candles_intervals(from_date, end_date, symbol, tf):
+
     fetched_intervals = find_fetched_candles_intervals(symbol, tf)
     missing_intervals = []
 
@@ -144,8 +146,8 @@ def get_missing_candles_intervals(from_date, end_date, symbol, tf):
         if from_date == interval['start']:
             break
 
-        missing_intervals.append({'start': from_date, 'end': interval['start']})
-        from_date = interval['end']
+        missing_intervals.append({'start': from_date, 'end': datetime_to_mts(interval['start'])})
+        from_date = datetime_to_mts(interval['end'])
 
         if end_date < from_date:
             break
@@ -159,6 +161,7 @@ async def get_candles(from_date, end_date, symbol, tf):
     print(f"From {mts_to_datetime(from_date)} to {mts_to_datetime(end_date)}")
     missing_intervals = get_missing_candles_intervals(from_date, end_date, symbol, tf)
     for interval in missing_intervals:
+        print(f"Interval start: {interval['start']} | Interval end: {interval['end']}")
         await fetch_candles(interval['start'], interval['end'], symbol, tf)
     candles = [candle.to_list() for candle in
                Candle.select().where(from_date <= Candle.mts <= end_date, Candle.symbol == symbol, Candle.tf == tf).order_by(
