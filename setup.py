@@ -20,7 +20,7 @@ here = path.abspath(path.dirname(__file__))
 
 setup(
     name='bfx-hf-strategy-py',
-    version='1.1.0',  # Required
+    version='1.1.1',  # Required
     description='Official Bitfinex Honey Framework for Python',  # Optional
     long_description='This is an official honey framework library used to create trading strategies',  # Optional
     long_description_content_type='text/markdown',  # Optional
@@ -67,7 +67,8 @@ setup(
     #
     # For an analysis of "install_requires" vs pip's requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['eventemitter', 'asyncio', 'websockets', 'pylint', 'bfxapi', 'pyee', 'aiohttp'],  # Optional
+    install_requires=['eventemitter', 'asyncio', 'websockets', 'pylint', 'bitfinex-api-py', 'peewee', 'nest-asyncio',
+                      'pyee', 'aiohttp'],  # Optional
 
     project_urls={  # Optional
         'Bug Reports': 'https://github.com/bitfinexcom/bfx-hf-strategy-py/issues',

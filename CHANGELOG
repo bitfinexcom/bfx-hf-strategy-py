@@ -1,3 +1,9 @@
+1.1.1
+
+- Updated requirements and setup.py
+- Implemented exe.with_local_database()
+- Replaced EventEmitter(async) with the new AsyncIOEventEmitter()
+
 1.1.0
 
 - included fix for indicators bfx-hf-indicators-py/pull/8
