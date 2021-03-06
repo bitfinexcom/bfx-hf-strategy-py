@@ -181,8 +181,6 @@ then = now - (1000 * 60 * 60 * 24 * 36) # 5 days ago
 loop = asyncio.get_event_loop()
 loop.run_until_complete(exe.with_local_database(then, now))
 ```
-NOTE: this requires you to run an instance of the `bfx-hf-data-server` locally on port `8899`
-
 
 ## Live trading
 
