@@ -126,26 +126,26 @@ Once the executor has finished it will display a matplotlib visualization of the
 
 ![alt text](https://i.ibb.co/47jL0xL/chart-pic.png "Back-testing chart example")
 
+### Fetching Candles via REST and Backtesting with Local SQLite Storage
+
+Alternatively you can fetch and locally store the required data from the Bitfinex REST API. The data is cached in a local SQLite database.
+
+```python
+import time
+import asyncio
+now = int(round(time.time() * 1000))
+then = now - (1000 * 60 * 60 * 24 * 36) # 36 days ago
+
+loop = asyncio.get_event_loop()
+loop.run_until_complete(exe.with_local_database(then, now))
+```
+
 ### Live backtesting
 
 Live backtesting allows you to run the strategy with realtime data pulled from the Bitfinex api but with the order management still being simulated. We recommend that you use this method before running your strategy on a live account.
 
 ```python
 exe.backtest_live()
-```
-
-### Live backtesting (with local cache)
-
-Alternatively you can fetch and store locally the required data from the Bitfinex REST API
-
-```python
-import time
-import asyncio
-now = int(round(time.time() * 1000))
-then = now - (1000 * 60 * 60 * 24 * 36) # 5 days ago
-
-loop = asyncio.get_event_loop()
-loop.run_until_complete(exe.with_local_database(then, now))
 ```
 
 ### Live trading
