@@ -8,6 +8,7 @@ from prettytable import PrettyTable
 from bfxapi import Client
 from pyee import EventEmitter
 
+from ..utils.db import *
 from ..utils.custom_logger import CustomLogger
 from ..utils.mock_websocket_client import MockClient
 from ..utils.mock_order_manager import MockOrderManager
@@ -191,14 +192,32 @@ class Executor:
     self.strategy.backtesting = True
     self.strategy.ws.run(self.strategy.symbol, fromDate, toDate, trades, candles, self.timeframe, sync)
 
-  def offline(self, file=None, candles=None):
+  async def with_local_database(self, fromDate, toDate):
     bfx = MockClient()
     bfxOrderManager = MockOrderManager(bfx, logLevel=self.strategy.logLevel)
     self.strategy.set_order_manager(bfxOrderManager)
     self.strategy.backtesting = True
-    if candles:
-      return self.strategy._executeWithCandles(candles)
-    elif file:
+    await initialize_db()
+    data = await get_candles(fromDate, toDate, self.strategy.symbol, self.timeframe)
+    candles = [_format_candle(
+      candleArray[0], candleArray[1], candleArray[2], candleArray[3],
+      candleArray[4], candleArray[5], self.strategy.symbol, self.timeframe
+    ) for candleArray in data]
+    # save candles so we can draw a chart later on
+    for c in candles:
+      self.stored_prices[c['mts']] = c['close']
+    # run async event loop
+    loop = asyncio.get_event_loop()
+    task = asyncio.ensure_future(_process_candle_batch(self.strategy, candles))
+    loop.run_until_complete(task)
+    self._draw_chart()
+
+  def offline(self, file=None):
+    bfx = MockClient()
+    bfxOrderManager = MockOrderManager(bfx, logLevel=self.strategy.logLevel)
+    self.strategy.set_order_manager(bfxOrderManager)
+    self.strategy.backtesting = True
+    if file:
       with open(file, 'r') as f:
         candleData = json.load(f)
         candleData.reverse()
@@ -215,7 +234,7 @@ class Executor:
         loop.run_until_complete(task)
         self._draw_chart()
     else:
-      raise KeyError("Expected either 'candles' or 'file' in parameters.")
+      raise KeyError("Expected 'file' in parameters.")
 
   def backtest_live(self):
     self.strategy.backtesting = True

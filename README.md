@@ -160,24 +160,26 @@ Once the executor has finishied it will display a matplotlib visualization of th
 
 ![alt text](https://i.ibb.co/47jL0xL/chart-pic.png "Back-testing chart example")
 
-## Data server
-
-Alternatively you can connect the strategy to an instance of the [bfx-hf-data-server](https://github.com/bitfinexcom/bfx-hf-data-server) which will allows you to specify the time period of the data that you would like to execute the strategy on. The data server will then begin to stream data for the given time period to your strategy.
-
-```python
-import time
-now = int(round(time.time() * 1000))
-then = now - (1000 * 60 * 60 * 24 * 5) # 5 days ago
-exe.with_data_server(then, now)
-```
-NOTE: this requires you to run an instance of the `bfx-hf-data-server` locally on port `8899`
-
 ## Live backtesting
 
 Live backtesting allows you to run the strategy with realtime data pulled from the Bitfinex api but with the order management still being simulated. We recommend that you use this method before running your strategy on a live account.
 
 ```python
 exe.backtest_live()
+```
+
+## Live backtesting (with local cache)
+
+Alternatively you can fetch and store locally the required data from the Bitfinex REST API 
+
+```python
+import time
+import asyncio
+now = int(round(time.time() * 1000))
+then = now - (1000 * 60 * 60 * 24 * 36) # 5 days ago
+
+loop = asyncio.get_event_loop()
+loop.run_until_complete(exe.with_local_database(then, now))
 ```
 
 ## Live trading
