@@ -1,5 +1,5 @@
 # Honey Framework for Python
-This repo serves as a framework for creating trading bots/strategies on the Bitfinex platform. It consists of a set of order methods and an architecture compatible with bfx-hf-data-server and bfx-hf-backtest for backtests on historical candle/trade data, which can be transitioned seamlessly to trading on the live markets.
+This repo serves as a framework for creating trading bots/strategies on the Bitfinex platform. It consists of a set of order methods and helps with backtests on historical candle/trade data, which can be transitioned seamlessly to trading on the live markets.
 
 Strategies written using this framework must define a set of update methods, called on each tick (with either a trade or a candle), along with a set of indicators which are automatically updated on each tick. The indicators are made available to the strategy methods, and can be queried to direct trading behavior.
 
