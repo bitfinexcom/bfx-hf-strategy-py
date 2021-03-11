@@ -197,6 +197,7 @@ class Executor:
     bfxOrderManager = MockOrderManager(bfx, logLevel=self.strategy.logLevel)
     self.strategy.set_order_manager(bfxOrderManager)
     self.strategy.backtesting = True
+    await initialize_db()
     data = await get_candles(fromDate, toDate, self.strategy.symbol, self.timeframe)
     candles = [_format_candle(
       candleArray[0], candleArray[1], candleArray[2], candleArray[3],

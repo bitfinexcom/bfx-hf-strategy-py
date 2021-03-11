@@ -4,7 +4,6 @@ import datetime
 from bfxapi import Client
 
 db = SqliteDatabase('bfx-hf-strategy.db')
-db.connect()
 
 class BaseModel(Model):
     class Meta:
@@ -33,8 +32,6 @@ class Candle(BaseModel):
     def to_list(self):
         return [self.mts, self.open, self.close, self.high, self.low, self.volume]
 
-db.create_tables([Candle])
-
 def tf_to_minutes(tf):
     converter = {
         '1m': 1,
@@ -62,33 +59,6 @@ def mts_to_datetime(mts):
 
 def datetime_to_mts(dt):
     return int(dt.timestamp() * 1000)
-
-async def fetch_candles(from_date, end_date, symbol, tf):
-    bfx = Client(logLevel='DEBUG')
-    candles = []
-    minutes = tf_to_minutes(tf)
-    print(f'Fetching from {mts_to_datetime(from_date)} to {mts_to_datetime(end_date)} | {symbol} | {tf}')
-    step = math.floor(10000 * minutes)
-    while from_date < end_date:
-        end_of_interval = mts_to_datetime(from_date) + datetime.timedelta(minutes=step)
-        now = datetime.datetime.now()
-
-        if end_of_interval > now:
-            end_of_interval_ts = datetime_to_mts(now)
-        else:
-            end_of_interval_ts = datetime_to_mts(end_of_interval)
-        response = None
-        while not response:
-            try:
-                response = await bfx.rest.get_public_candles(symbol=symbol, start=from_date, end=end_of_interval_ts,
-                                                             tf=tf, limit=10000)
-                print(f'Fetched {len(response)} candles')
-            except:
-                print('Rate limit reached | Sleeping and trying again...')
-        candles += response
-        from_date = end_of_interval_ts
-    store_candles(candles, symbol, tf)
-    return candles
 
 def store_candles(candles, symbol, tf):
     data_source = [{
@@ -156,6 +126,33 @@ def get_missing_candles_intervals(from_date, end_date, symbol, tf):
 
     return missing_intervals
 
+async def fetch_candles(from_date, end_date, symbol, tf):
+    bfx = Client(logLevel='DEBUG')
+    candles = []
+    minutes = tf_to_minutes(tf)
+    print(f'Fetching from {mts_to_datetime(from_date)} to {mts_to_datetime(end_date)} | {symbol} | {tf}')
+    step = math.floor(10000 * minutes)
+    while from_date < end_date:
+        end_of_interval = mts_to_datetime(from_date) + datetime.timedelta(minutes=step)
+        now = datetime.datetime.now()
+
+        if end_of_interval > now:
+            end_of_interval_ts = datetime_to_mts(now)
+        else:
+            end_of_interval_ts = datetime_to_mts(end_of_interval)
+        response = None
+        while not response:
+            try:
+                response = await bfx.rest.get_public_candles(symbol=symbol, start=from_date, end=end_of_interval_ts,
+                                                             tf=tf, limit=10000)
+                print(f'Fetched {len(response)} candles')
+            except:
+                print('Rate limit reached | Sleeping and trying again...')
+        candles += response
+        from_date = end_of_interval_ts
+    store_candles(candles, symbol, tf)
+    return candles
+
 async def get_candles(from_date, end_date, symbol, tf):
     print(f"Getting candles from {mts_to_datetime(from_date)} to {mts_to_datetime(end_date)}")
     missing_intervals = get_missing_candles_intervals(from_date, end_date, symbol, tf)
@@ -166,3 +163,7 @@ async def get_candles(from_date, end_date, symbol, tf):
                Candle.select().where(from_date <= Candle.mts <= end_date, Candle.symbol == symbol, Candle.tf == tf).order_by(
                    Candle.mts)]
     return candles
+
+async def initialize_db():
+    db.connect()
+    db.create_tables([Candle])
