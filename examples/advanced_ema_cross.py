@@ -99,8 +99,3 @@ async def update_long(update, position):
 from hfstrategy import Executor
 Executor(strategy, timeframe='1hr').offline(file='btc_candle_data.json')
 # Executor(strategy, timeframe='1m').backtest_live()
-
-# import time
-# now = int(round(time.time() * 1000))
-# then = now - (1000 * 60 * 60 * 24 * 15) # 15 days ago
-# Executor(strategy, timeframe='30m').with_data_server(then, now)

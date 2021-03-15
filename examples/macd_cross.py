@@ -54,12 +54,6 @@ exe = Executor(strategy, timeframe='1hr')
 # Backtest offline
 exe.offline(file='btc_candle_data.json')
 
-# Backtest with data-backtest server
-# import time
-# now = int(round(time.time() * 1000))
-# then = now - (1000 * 60 * 60 * 24 * 2) # 5 days ago
-# exe.with_data_server(then, now)
-
 # Execute live
 # import os
 # API_KEY=os.getenv("BFX_KEY")

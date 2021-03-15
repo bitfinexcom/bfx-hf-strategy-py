@@ -12,7 +12,6 @@ from ..utils.db import *
 from ..utils.custom_logger import CustomLogger
 from ..utils.mock_websocket_client import MockClient
 from ..utils.mock_order_manager import MockOrderManager
-from .data_server_websocket import DataServerWebsocket
 from ..strategy.order_manager import OrderManager
 from ..utils.charts import show_orders_chart
 
@@ -170,27 +169,6 @@ class Executor:
     bfx.ws.on('new_candle', self._store_candle_price)
     bfx.ws.on('new_trade', self.strategy._process_new_trade)
     bfx.ws.run()
-
-  def with_data_server(self, fromDate, toDate, trades=True, candles=True, sync=True):
-    def end():
-      _finish(self.strategy)
-      self._draw_chart()
-    ws = DataServerWebsocket(
-      logLevel=self.strategy.logLevel,
-      create_event_emitter=lambda: self.strategy.events # use the strategies event emitter
-      )
-    self.strategy.ws = ws
-    ws.on('connected', self.strategy._ready)
-    ws.on('done', end)
-    ws.on('new_candle', self.strategy._process_new_candle)
-    ws.on('new_candle', self._store_candle_price)
-    ws.on('new_trade', self.strategy._process_new_trade)
-    # mock order simulation
-    bfx = MockClient()
-    bfxOrderManager = MockOrderManager(bfx, logLevel=self.strategy.logLevel)
-    self.strategy.set_order_manager(bfxOrderManager)
-    self.strategy.backtesting = True
-    self.strategy.ws.run(self.strategy.symbol, fromDate, toDate, trades, candles, self.timeframe, sync)
 
   async def with_local_database(self, fromDate, toDate):
     bfx = MockClient()

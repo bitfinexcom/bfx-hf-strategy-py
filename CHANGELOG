@@ -1,3 +1,8 @@
+2.0.0
+
+ - removed bfx-hf-data-server connectors, replaced by
+   `with_local_database()`
+
 1.1.1
 
 - Updated requirements and setup.py
